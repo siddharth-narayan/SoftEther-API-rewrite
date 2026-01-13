@@ -1,0 +1,12 @@
+// void *GetNext(QUEUE *q);
+// void *GetNextWithLock(QUEUE *q);
+// void InsertQueue(QUEUE *q, void *p);
+// void InsertQueueWithLock(QUEUE *q, void *p);
+// void InsertQueueInt(QUEUE *q, UINT value);
+// void LockQueue(QUEUE *q);
+// void UnlockQueue(QUEUE *q);
+// void ReleaseQueue(QUEUE *q);
+// void CleanupQueue(QUEUE *q);
+// QUEUE *NewQueue();
+// QUEUE *NewQueueFast();
+// UINT GetQueueNum(QUEUE *q);

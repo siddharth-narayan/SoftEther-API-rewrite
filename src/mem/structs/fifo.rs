@@ -1,0 +1,15 @@
+// UINT ReadFifo(FIFO *f, void *p, UINT size);
+// BUF *ReadFifoAll(FIFO *f);
+// void ShrinkFifoMemory(FIFO *f);
+// UCHAR *GetFifoPointer(FIFO *f);
+// UCHAR *FifoPtr(FIFO *f);
+// void WriteFifo(FIFO *f, void *p, UINT size);
+// UINT FifoSize(FIFO *f);
+// void ReleaseFifo(FIFO *f);
+// void CleanupFifo(FIFO *f);
+// FIFO *NewFifo();
+// FIFO *NewFifoFast();
+// FIFO *NewFifoEx(bool fast);
+// FIFO *NewFifoEx2(bool fast, bool fixed);
+// void InitFifo();
+// void SetFifoCurrentReallocMemSize(UINT size);
