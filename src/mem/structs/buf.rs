@@ -47,3 +47,23 @@
 
 // void AppendBufUtf8(BUF *b, wchar_t *str);
 // void AppendBufStr(BUF *b, char *str);
+
+
+struct Buffer<T> {
+    buf: VecDeque<T>,
+    current_pos: usize
+}
+
+impl Buffer<T> {
+    pub fn new() -> Buffer<T> {
+        {
+            buf: VecDeque::new::<T>(),
+            current_pos: 0,
+        }
+    }
+}
+
+pub fn NewBuf<T>() -> *mut Buffer<T> {
+    let buffer = Buffer<T>::new()
+    unsafe { buffer.as_mut_ptr() }
+}
