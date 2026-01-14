@@ -75,6 +75,87 @@
 // bool IsInHashListKey(HASH_LIST *h, UINT key);
 // void *HashListKeyToPointer(HASH_LIST *h, UINT key);
 
+pub extern "C" fn Search(o: *mut List, target: *mut c_void) -> *mut c_void {}
+pub extern "C" fn Sort(o: *mut List) {}
+pub extern "C" fn Add(o: *mut List, p: *mut c_void) {}
+pub extern "C" fn AddDistinct(o: *mut List, p: *mut c_void) {}
+pub extern "C" fn Insert(o: *mut List, p: *mut c_void) {}
+pub extern "C" fn Delete(o: *mut List, p: *mut c_void) -> bool {}
+pub extern "C" fn DeleteAll(o: *mut List) {}
+pub extern "C" fn LockList(o: *mut List) {}
+pub extern "C" fn UnlockList(o: *mut List) {}
+pub extern "C" fn ReleaseList(o: *mut List) {}
+pub extern "C" fn CleanupList(o: *mut List) {}
+
+pub extern "C" fn NewList(cmp: Compare) -> *mut List {}
+pub extern "C" fn NewListFast(cmp: Compare) -> *mut List {}
+pub extern "C" fn NewListEx(cmp: Compare, fast: bool) -> *mut List {}
+pub extern "C" fn NewListEx2(cmp: Compare, fast: bool, fast_malloc: bool) -> *mut List {}
+pub extern "C" fn NewListSingle(p: *mut c_void) -> *mut List {}
+pub extern "C" fn NewEntryList(src: *const c_char, key_separator: *const c_char, value_separator: *const c_char) -> *mut List {}
+pub extern "C" fn EntryListHasKey(o: *mut List, key: *const c_char) -> bool {}
+pub extern "C" fn EntryListStrValue(o: *mut List, key: *const c_char) -> *mut c_char {}
+pub extern "C" fn EntryListIntValue(o: *mut List, key: *const c_char) -> u32 {}
+pub extern "C" fn FreeEntryList(o: *mut List) {}
+pub extern "C" fn CloneList(o: *mut List) -> *mut List {}
+pub extern "C" fn CopyToArray(o: *mut List, p: *mut c_void) {}
+pub extern "C" fn ToArray(o: *mut List) -> *mut c_void {}
+pub extern "C" fn ToArrayEx(o: *mut List, fast: bool) -> *mut c_void {}
+
+pub extern "C" fn CompareStr(p1: *mut c_void, p2: *mut c_void) -> i32 {}
+pub extern "C" fn InsertStr(o: *mut List, str: *const c_char) -> bool {}
+pub extern "C" fn CompareUniStr(p1: *mut c_void, p2: *mut c_void) -> i32 {}
+
+pub extern "C" fn IsInList(o: *mut List, p: *mut c_void) -> bool {}
+pub extern "C" fn IsInListKey(o: *mut List, key: u32) -> bool {}
+pub extern "C" fn ListKeyToPointer(o: *mut List, key: u32) -> *mut c_void {}
+pub extern "C" fn IsInListStr(o: *mut List, str: *const c_char) -> bool {}
+pub extern "C" fn IsInListUniStr(o: *mut List, str: *const u16) -> bool {}
+pub extern "C" fn ReplaceListPointer(o: *mut List, oldptr: *mut c_void, newptr: *mut c_void) -> bool {}
+
+pub extern "C" fn AddInt(o: *mut List, i: u32) {}
+pub extern "C" fn AddInt64(o: *mut List, i: u64) {}
+pub extern "C" fn AddIntDistinct(o: *mut List, i: u32) {}
+pub extern "C" fn AddInt64Distinct(o: *mut List, i: u64) {}
+pub extern "C" fn DelInt(o: *mut List, i: u32) {}
+pub extern "C" fn ReleaseIntList(o: *mut List) {}
+pub extern "C" fn ReleaseInt64List(o: *mut List) {}
+pub extern "C" fn IsIntInList(o: *mut List, i: u32) -> bool {}
+pub extern "C" fn IsInt64InList(o: *mut List, i: u64) -> bool {}
+pub extern "C" fn NewIntList(sorted: bool) -> *mut List {}
+pub extern "C" fn NewInt64List(sorted: bool) -> *mut List {}
+
+pub extern "C" fn CompareInt(p1: *mut c_void, p2: *mut c_void) -> i32 {}
+pub extern "C" fn CompareInt64(p1: *mut c_void, p2: *mut c_void) -> i32 {}
+pub extern "C" fn InsertInt(o: *mut List, i: u32) {}
+pub extern "C" fn InsertIntDistinct(o: *mut List, i: u32) {}
+
+// Candidate
+pub extern "C" fn NewCandidateList() -> *mut List {}
+pub extern "C" fn FreeCandidateList(o: *mut List) {}
+pub extern "C" fn CompareCandidate(p1: *mut c_void, p2: *mut c_void) -> i32 {}
+pub extern "C" fn AddCandidate(o: *mut List, str: *const u16, num_max: u32) {}
+pub extern "C" fn CandidateToBuf(o: *mut List) -> *mut Buffer {}
+pub extern "C" fn BufToCandidate(b: *mut Buffer) -> *mut List {}
+
+// Strmap
+pub extern "C" fn NewStrMap() -> *mut List {}
+pub extern "C" fn StrMapSearch(map: *mut List, key: *const c_char) -> *mut c_void {}
+
+// HashList
+pub extern "C" fn NewHashList(get_hash_proc: GetHash, compare_proc: Compare, bits: u32, make_list: bool) -> *mut HashList {}
+pub extern "C" fn ReleaseHashList(h: *mut HashList) {}
+pub extern "C" fn CleanupHashList(h: *mut HashList) {}
+pub extern "C" fn AddHash(h: *mut HashList, p: *mut c_void) {}
+pub extern "C" fn DeleteHash(h: *mut HashList, p: *mut c_void) -> bool {}
+pub extern "C" fn SearchHash(h: *mut HashList, t: *mut c_void) -> *mut c_void {}
+pub extern "C" fn CalcHashForHashList(h: *mut HashList, p: *mut c_void) -> u32 {}
+pub extern "C" fn HashListToArray(h: *mut HashList, num: *mut u32) -> *mut *mut c_void {}
+pub extern "C" fn LockHashList(h: *mut HashList) {}
+pub extern "C" fn UnlockHashList(h: *mut HashList) {}
+pub extern "C" fn IsInHashListKey(h: *mut HashList, key: u32) -> bool {}
+pub extern "C" fn HashListKeyToPointer(h: *mut HashList, key: u32) -> *mut c_void {}
+
 // StrList
 // LIST *NewStrList();
 // void ReleaseStrList(LIST *o);
