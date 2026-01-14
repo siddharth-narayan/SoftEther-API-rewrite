@@ -31,7 +31,7 @@
 // void AppendBufUtf8(BUF *b, wchar_t *str);
 // void AppendBufStr(BUF *b, char *str);
 
-use std::{ffi::CStr, io::Write};
+use std::{ffi::CStr, fs::File, io::{Read, Write}, path::Path, ptr::{null, null_mut}};
 
 struct Buffer {
     buf: Vec<u8>,
@@ -208,31 +208,67 @@ pub extern "C" fn ReadBuf(buffer: *mut Buffer, out: *mut u8, size: usize) -> usi
     slice.len()
 }
 
-pub extern "C" fn ReadBufFromBuf(buffer: *mut Buffer, size: usize) -> *mut Buffer {
-    let buffer = unsafe { &mut *buffer };
+pub extern "C" fn ReadBufFromBuf(source: *mut Buffer, size: usize) -> *mut Buffer {
+    let source = unsafe { &mut *source };
+
+    let mut new = Buffer::new();
+
+    let data = source.read(size);
+
+    if data.len() < size {
+        return std::ptr::null_mut()
+    }
+
+    new.write(data);
+    new.as_mut_ptr()
 }
 
 pub extern "C" fn ReadBufChar(buffer: *mut Buffer) -> u8 {
     let buffer = unsafe { &mut *buffer };
+
+    buffer.read_u8()
 }
 
 pub extern "C" fn ReadBufShort(buffer: *mut Buffer) -> u16 {
     let buffer = unsafe { &mut *buffer };
+
+    buffer.read_u16()
 }
 
 pub extern "C" fn ReadBufInt(buffer: *mut Buffer) -> u32 {
     let buffer = unsafe { &mut *buffer };
+
+    buffer.read_u32()
 }
 
 pub extern "C" fn ReadBufInt64(buffer: *mut Buffer) -> u64 {
     let buffer = unsafe { &mut *buffer };
+
+    buffer.read_u64()
 }
 
-pub extern "C" fn ReadDump(filename: *const CStr) -> *mut Buffer {}
+pub extern "C" fn ReadDump(filename: *const i8) -> *mut Buffer {
+    let filename = unsafe { CStr::from_ptr(filename) };
+
+    let filename = match filename.to_str() {
+        Ok(s) => s,
+        Err(_) => return null_mut(), // invalid UTF-8
+    };
+
+    if let Ok(mut file) = File::open(filename) {
+        let mut buffer= Buffer::new();
+        
+        file.read_to_end(&mut buffer.buf);
+
+        buffer.as_mut_ptr()
+    } else {
+        return null_mut()
+    }
+}
 
 pub extern "C" fn ReadDumpWithMaxSize(filename: *const CStr, size: usize) -> *mut Buffer {}
 
-pub extern "C" fn ReadDumpW(filename: *const CStr) -> *mut Buffer {
+pub extern "C" fn ReadDumpW(filename: *const i8) -> *mut Buffer {
     // Filename is made of wchar_t -- handle with rust properly
 }
 

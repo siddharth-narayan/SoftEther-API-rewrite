@@ -1,15 +1,50 @@
 // void *GetNext(QUEUE *q);
-// void *GetNextWithLock(QUEUE *q);
-// void InsertQueue(QUEUE *q, void *p);
-// void InsertQueueWithLock(QUEUE *q, void *p);
-// void InsertQueueInt(QUEUE *q, UINT value);
-// void LockQueue(QUEUE *q);
-// void UnlockQueue(QUEUE *q);
-// void ReleaseQueue(QUEUE *q);
-// void CleanupQueue(QUEUE *q);
-// QUEUE *NewQueue();
-// QUEUE *NewQueueFast();
-// UINT GetQueueNum(QUEUE *q);
+// void *GetNextWithLock(QUEUE *q); // Not exported?
+// void InsertQueue(QUEUE *q, void *p); a
+// void InsertQueueWithLock(QUEUE *q, void *p); // Not exported?
+// void InsertQueueInt(QUEUE *q, UINT value); // Not exported?
+// void LockQueue(QUEUE *q); a
+// void UnlockQueue(QUEUE *q);a
+// void ReleaseQueue(QUEUE *q); a
+// void CleanupQueue(QUEUE *q); // Not exported?
+// QUEUE *NewQueue(); a
+// QUEUE *NewQueueFast(); a
+// UINT GetQueueNum(QUEUE *q); a
+
+use std::{collections::VecDeque, sync::Mutex};
+
+struct Queue<T> {
+    _internal: Mutex<VecDeque<T>>,
+}
+
+impl<T> Queue<T> {
+    pub fn new() -> Queue<T> {
+        Queue {
+            _internal: Mutex::new(VecDeque::new()),
+        }
+    }
+
+    pub fn as_mut_ptr(self) -> *mut Queue<T> {
+        let boxed = Box::new(self);
+        Box::into_raw(boxed)
+    }
+
+    pub fn next(&mut self) -> Option<T> {
+        let guard = self._internal.lock();
+
+        let mut queue = guard.unwrap();
+
+        queue.pop_front()
+    }
+
+    pub fn push(&mut self, item: T) {
+        let guard = self._internal.lock();
+
+        let mut queue = guard.unwrap();
+
+        queue.push_back(item);
+    }
+}
 
 pub extern "C" fn GetNext(q: *mut Queue) -> *mut c_void {}
 pub extern "C" fn GetNextWithLock(q: *mut Queue) -> *mut c_void {}
