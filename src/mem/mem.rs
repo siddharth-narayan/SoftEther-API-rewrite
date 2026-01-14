@@ -11,7 +11,6 @@
 // void CheckMemTag2(MEMTAG2 *tag);
 // UINT GetMemSize(void *addr);
 
-
 // void *InternalMalloc(UINT size);
 // void *InternalReAlloc(void *addr, UINT size);
 // void InternalFree(void *addr);
@@ -25,7 +24,6 @@
 // void *Clone(void *addr, UINT size);
 // void *AddHead(void *src, UINT src_size, void *head, UINT head_size);
 
-
 use std::alloc::{Layout, alloc, dealloc};
 use std::ffi::{c_uint, c_void};
 use std::mem::zeroed;
@@ -36,11 +34,11 @@ struct Header {
     size: usize,
 }
 
-extern "C" fn Malloc(size: usize) -> *mut u8 {
+pub extern "C" fn Malloc(size: usize) -> *mut u8 {
     MallocEx(size, false)
 }
 
-extern "C" fn MallocEx(size: usize, zero_after_free: bool) -> *mut u8 {
+pub extern "C" fn MallocEx(size: usize, zero_after_free: bool) -> *mut u8 {
     let header_size = mem::size_of::<Header>();
     let layout = Layout::from_size_align(header_size + size, mem::align_of::<usize>()).unwrap();
 
@@ -61,7 +59,7 @@ extern "C" fn MallocEx(size: usize, zero_after_free: bool) -> *mut u8 {
 
 // TODO: The following functions modify stats in the Kernel -- Like a count of allocations and frees, to detect memory leaks
 
-extern "C" fn Free(user_ptr: *mut u8) {
+pub extern "C" fn Free(user_ptr: *mut u8) {
     let header_size = mem::size_of::<Header>();
     let header_ptr = unsafe { user_ptr.sub(header_size) as *mut Header };
     let size = unsafe { (*header_ptr).size };
@@ -70,7 +68,7 @@ extern "C" fn Free(user_ptr: *mut u8) {
     unsafe { dealloc(header_ptr as *mut u8, layout) };
 }
 
-extern "C" fn Move(destination: *mut u8, source: *mut u8, size: usize) {
+pub extern "C" fn Move(destination: *mut u8, source: *mut u8, size: usize) {
     if destination.is_null() || source.is_null() || size == 0 {
         return;
     }
@@ -79,19 +77,16 @@ extern "C" fn Move(destination: *mut u8, source: *mut u8, size: usize) {
     unsafe { ptr::copy(source, destination, size) };
 }
 
-extern "C" fn Copy(destination: *mut u8, source: *mut u8, size: usize) {
+pub extern "C" fn Copy(destination: *mut u8, source: *mut u8, size: usize) {
     if destination.is_null() || source.is_null() || size == 0 {
         return;
     }
 
-    for index in 0..size {
-        unsafe {
-            *destination.add(index.into()) = *source.add(index.into());
-        }
-    }
+    // ptr::copy is equivalent to memcpy in C
+    unsafe { ptr::copy_nonoverlapping(source, destination, size) };
 }
 
-extern "C" fn Clone(source: *mut u8, size: usize) -> *mut u8 {
+pub extern "C" fn Clone(source: *mut u8, size: usize) -> *mut u8 {
     let clone = Malloc(size);
 
     Copy(clone, source, size);
@@ -99,7 +94,7 @@ extern "C" fn Clone(source: *mut u8, size: usize) -> *mut u8 {
     return clone;
 }
 
-extern "C" fn Zero(addr: *mut u8, size: usize) {
+pub extern "C" fn Zero(addr: *mut u8, size: usize) {
     if addr.is_null() {
         return;
     }
