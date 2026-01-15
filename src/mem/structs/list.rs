@@ -1,6 +1,66 @@
-struct List {
-    
+use std::ffi::c_void;
+
+type CompareFunction = dyn FnMut(&'a T) -> Ordering;
+type FfiCompareFunction = extern "C" fn(*const c_void, *const c_void ) -> i32;
+
+struct List<T> {
+    sorted: bool,
+    items: Vec<T>,
+    compare_function: CompareFunction,
 }
+
+
+
+impl<T: Ord> List<T> {
+    pub fn new() -> List<T> {
+        List { sorted: true, items: Vec::new(), compare_function: |item_1: &T, item_2: &T| {
+            item_1.cmp(item_2)
+        }}
+    }
+}
+
+impl<T> List<T> {
+    
+    pub fn new_with_ffi_cmp(compare: FfiCompareFunction) -> List<T> {
+        let rustified_compare_func = |item_1, item_2| {
+            let (item_1, item_2) = (item_1 as *const T, item_2 as *const T);
+            let (item_1, item_2) = (item_1 as *const c_void, item_2 as *const c_void);
+
+            let result = (compare)(item_1, item_2);
+            
+            if result < 0 {
+                std::cmp::Ordering::Less
+            } else if result > 0 {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        };
+
+        List { sorted: true, items: Vec::new(), compare_function: rustified_compare_func}
+    }
+
+    pub fn as_mut_ptr(self) -> *mut List<T> {
+        let boxed = Box::new(self);
+        Box::into_raw(boxed)
+    }
+
+    pub fn free_mut_ptr(ptr: *mut List<T>) {
+        unsafe { drop(Box::from_raw(ptr)) }
+    }
+
+    pub fn sort(&mut self) {
+        self.items.sort_unstable_by(self.compare_function)
+    }
+
+    pub fn search(&self, item: &T) -> Option<usize> {
+        match self.items.binary_search_by(self.compare_function) {
+            Ok(size) => Some(size),
+            Err(_) => None,
+        }
+    }
+}
+
 
 // void *Search(LIST *o, void *target);
 // void Sort(LIST *o);
