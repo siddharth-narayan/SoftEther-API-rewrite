@@ -1,3 +1,7 @@
+struct List {
+    
+}
+
 // void *Search(LIST *o, void *target);
 // void Sort(LIST *o);
 // void Add(LIST *o, void *p);

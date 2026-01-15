@@ -77,7 +77,7 @@ pub extern "C" fn Move(destination: *mut u8, source: *mut u8, size: usize) {
     unsafe { ptr::copy(source, destination, size) };
 }
 
-pub extern "C" fn Copy(destination: *mut u8, source: *mut u8, size: usize) {
+pub extern "C" fn Copy(destination: *mut u8, source: *const u8, size: usize) {
     if destination.is_null() || source.is_null() || size == 0 {
         return;
     }
@@ -86,7 +86,7 @@ pub extern "C" fn Copy(destination: *mut u8, source: *mut u8, size: usize) {
     unsafe { ptr::copy_nonoverlapping(source, destination, size) };
 }
 
-pub extern "C" fn Clone(source: *mut u8, size: usize) -> *mut u8 {
+pub extern "C" fn Clone(source: *const u8, size: usize) -> *mut u8 {
     let clone = Malloc(size);
 
     Copy(clone, source, size);
