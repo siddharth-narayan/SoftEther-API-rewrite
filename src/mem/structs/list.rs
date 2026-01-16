@@ -1,28 +1,28 @@
-use std::ffi::c_void;
+use std::{cmp::Ordering, ffi::c_void};
 
-type CompareFunction = dyn FnMut(&'a T) -> Ordering;
+type CompareFunction<T> = Box<dyn for<'a, 'b>Fn(&'a T, &'b T) -> Ordering>;
 type FfiCompareFunction = extern "C" fn(*const c_void, *const c_void ) -> i32;
 
 struct List<T> {
     sorted: bool,
     items: Vec<T>,
-    compare_function: CompareFunction,
+    compare_function: CompareFunction<T>,
 }
 
 
 
 impl<T: Ord> List<T> {
     pub fn new() -> List<T> {
-        List { sorted: true, items: Vec::new(), compare_function: |item_1: &T, item_2: &T| {
+        List { sorted: true, items: Vec::new(), compare_function: Box::new(|item_1: &T, item_2: &T| {
             item_1.cmp(item_2)
-        }}
+        })}
     }
 }
 
 impl<T> List<T> {
     
     pub fn new_with_ffi_cmp(compare: FfiCompareFunction) -> List<T> {
-        let rustified_compare_func = |item_1, item_2| {
+        let rustified_compare_func = Box::new( move|item_1: &T, item_2: &T| {
             let (item_1, item_2) = (item_1 as *const T, item_2 as *const T);
             let (item_1, item_2) = (item_1 as *const c_void, item_2 as *const c_void);
 
@@ -35,7 +35,7 @@ impl<T> List<T> {
             } else {
                 std::cmp::Ordering::Equal
             }
-        };
+        });
 
         List { sorted: true, items: Vec::new(), compare_function: rustified_compare_func}
     }
@@ -50,11 +50,15 @@ impl<T> List<T> {
     }
 
     pub fn sort(&mut self) {
-        self.items.sort_unstable_by(self.compare_function)
+        self.items.sort_unstable_by(&self.compare_function)
     }
 
     pub fn search(&self, item: &T) -> Option<usize> {
-        match self.items.binary_search_by(self.compare_function) {
+        let search_closure = | cmp_item: &T | {
+            (&self.compare_function)(item, cmp_item)
+        };
+
+        match self.items.binary_search_by(search_closure) {
             Ok(size) => Some(size),
             Err(_) => None,
         }
