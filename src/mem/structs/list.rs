@@ -157,6 +157,7 @@ impl<T> List<T> {
 // bool IsInHashListKey(HASH_LIST *h, UINT key);
 // void *HashListKeyToPointer(HASH_LIST *h, UINT key);
 
+#[unsafe(no_mangle)]
 pub extern "C" fn Search(ptr: *mut List<RawPtr>, target: RawPtr) -> RawPtr {
     let list = unsafe { &mut *ptr };
 
@@ -167,18 +168,21 @@ pub extern "C" fn Search(ptr: *mut List<RawPtr>, target: RawPtr) -> RawPtr {
     return null_mut()
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn Sort<T>(ptr: *mut List<T>) {
     let list = unsafe { &mut *ptr };
 
     list.sort();
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn Add(ptr: *mut List<RawPtr>, value: RawPtr) {
     let list = unsafe { &mut *ptr };
 
     list.add(value);
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn AddDistinct(ptr: *mut List<RawPtr>, item: RawPtr) {
     let list = unsafe { &mut *ptr };
 
@@ -187,8 +191,10 @@ pub extern "C" fn AddDistinct(ptr: *mut List<RawPtr>, item: RawPtr) {
     }
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn Insert(ptr: *mut List<RawPtr>, item: RawPtr) {}
 
+#[unsafe(no_mangle)]
 pub extern "C" fn Delete(ptr: *mut List<RawPtr>, item: RawPtr) -> bool {
     let list = unsafe { &mut *ptr };
 
@@ -201,16 +207,20 @@ pub extern "C" fn Delete(ptr: *mut List<RawPtr>, item: RawPtr) -> bool {
     return false;
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn DeleteAll(ptr: *mut List<RawPtr>) {
     let list = unsafe { &mut *ptr };
 
     list.items.clear();
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn LockList<T>(ptr: *mut List<T>) {}
 
+#[unsafe(no_mangle)]
 pub extern "C" fn UnlockList<T>(ptr: *mut List<T>) {}
 
+#[unsafe(no_mangle)]
 pub extern "C" fn ReleaseList<T>(ptr: *mut List<T>) {
     List::free_mut_ptr(ptr);
 }
@@ -218,10 +228,12 @@ pub extern "C" fn ReleaseList<T>(ptr: *mut List<T>) {
 // UNUSED
 // pub extern "C" fn CleanupList(ptr: *mut List) {}
 
+#[unsafe(no_mangle)]
 pub extern "C" fn NewList(cmp: FfiCompareFunction) -> *mut List<RawPtr> {
     List::new().as_mut_ptr()
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn NewListFast(cmp: FfiCompareFunction) -> *mut List<RawPtr> {
     NewList(cmp)
 }
@@ -232,6 +244,7 @@ pub extern "C" fn NewListFast(cmp: FfiCompareFunction) -> *mut List<RawPtr> {
 // UNUSED
 // pub extern "C" fn NewListEx2(cmp: Compare, fast: bool, fast_malloc: bool) -> *mut List {}
 
+#[unsafe(no_mangle)]
 pub extern "C" fn NewListSingle(p: RawPtr) -> *mut List<RawPtr> {
     let mut l = List::new();
     l.add(p);

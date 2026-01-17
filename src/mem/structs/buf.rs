@@ -194,6 +194,7 @@ impl Buffer {
 // UINT ReadBufRemainSize(BUF *b);
 use crate::mem::mem::{Copy, Zero};
 
+#[unsafe(no_mangle)]
 pub extern "C" fn ReadBuf(buffer: *mut Buffer, out: *mut u8, size: usize) -> usize {
     let buffer = unsafe { &mut *buffer };
 
@@ -208,6 +209,7 @@ pub extern "C" fn ReadBuf(buffer: *mut Buffer, out: *mut u8, size: usize) -> usi
     slice.len()
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn ReadBufFromBuf(source: *mut Buffer, size: usize) -> *mut Buffer {
     let source = unsafe { &mut *source };
 
@@ -223,30 +225,35 @@ pub extern "C" fn ReadBufFromBuf(source: *mut Buffer, size: usize) -> *mut Buffe
     new.as_mut_ptr()
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn ReadBufChar(buffer: *mut Buffer) -> u8 {
     let buffer = unsafe { &mut *buffer };
 
     buffer.read_u8()
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn ReadBufShort(buffer: *mut Buffer) -> u16 {
     let buffer = unsafe { &mut *buffer };
 
     buffer.read_u16()
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn ReadBufInt(buffer: *mut Buffer) -> u32 {
     let buffer = unsafe { &mut *buffer };
 
     buffer.read_u32()
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn ReadBufInt64(buffer: *mut Buffer) -> u64 {
     let buffer = unsafe { &mut *buffer };
 
     buffer.read_u64()
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn ReadDump(filename: *const i8) -> *mut Buffer {
     let filename = unsafe { CStr::from_ptr(filename) };
 
@@ -292,7 +299,8 @@ pub extern "C" fn ReadDump(filename: *const i8) -> *mut Buffer {
 //     let buffer = unsafe { &mut *buffer };
 // }
 
-pub fn NewBuf() -> *mut Buffer {
+#[unsafe(no_mangle)]
+pub extern "C" fn NewBuf() -> *mut Buffer {
     let buffer = Buffer::new();
     buffer.as_mut_ptr()
 }

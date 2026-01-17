@@ -56,6 +56,7 @@ impl<T> Queue<T> {
     }
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn GetNext(ptr: *mut Queue<RawPtr>) -> RawPtr {
     let queue = unsafe {&mut *ptr};
 
@@ -66,21 +67,24 @@ pub extern "C" fn GetNext(ptr: *mut Queue<RawPtr>) -> RawPtr {
     }
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn GetNextWithLock(ptr: *mut Queue<RawPtr>) -> RawPtr {
     GetNext(ptr)
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn InsertQueue(ptr: *mut Queue<RawPtr>, p: RawPtr) {
     let queue = unsafe {&mut *ptr};
 
     queue.push(p);
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn InsertQueueWithLock(ptr: *mut Queue<RawPtr>, p: RawPtr) {
     InsertQueue(ptr, p);
 }
 
-
+#[unsafe(no_mangle)]
 pub extern "C" fn InsertQueueInt(ptr: *mut Queue<RawPtr>, value: u32) {
     let value_ptr: *const u32 = &value;
     let value_ptr = value_ptr as *const u8;
@@ -92,25 +96,33 @@ pub extern "C" fn InsertQueueInt(ptr: *mut Queue<RawPtr>, value: u32) {
     InsertQueue(ptr, new_value);
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn LockQueue(ptr: *mut Queue<RawPtr>) {}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn UnlockQueue(ptr: *mut Queue<RawPtr>) {}
 
+#[unsafe(no_mangle)]
 pub extern "C" fn ReleaseQueue(ptr: *mut Queue<RawPtr>) {
     Queue::free_mut_ptr(ptr);
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn CleanupQueue(ptr: *mut Queue<RawPtr>) {
     Queue::free_mut_ptr(ptr); // Check difference with ReleaseQueue
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn NewQueue() -> *mut Queue<RawPtr> {
     Queue::new().as_mut_ptr()
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn NewQueueFast() -> *mut Queue<RawPtr> {
     Queue::new().as_mut_ptr()
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn GetQueueNum(ptr: *mut Queue<RawPtr>) -> usize {
     let queue = unsafe {&mut *ptr};
 

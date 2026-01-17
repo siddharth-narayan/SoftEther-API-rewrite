@@ -34,10 +34,12 @@ struct Header {
     size: usize,
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn Malloc(size: usize) -> *mut u8 {
     MallocEx(size, false)
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn MallocEx(size: usize, zero_after_free: bool) -> *mut u8 {
     let header_size = mem::size_of::<Header>();
     let layout = Layout::from_size_align(header_size + size, mem::align_of::<usize>()).unwrap();
@@ -59,6 +61,7 @@ pub extern "C" fn MallocEx(size: usize, zero_after_free: bool) -> *mut u8 {
 
 // TODO: The following functions modify stats in the Kernel -- Like a count of allocations and frees, to detect memory leaks
 
+#[unsafe(no_mangle)]
 pub extern "C" fn Free(user_ptr: *mut u8) {
     let header_size = mem::size_of::<Header>();
     let header_ptr = unsafe { user_ptr.sub(header_size) as *mut Header };
@@ -68,6 +71,7 @@ pub extern "C" fn Free(user_ptr: *mut u8) {
     unsafe { dealloc(header_ptr as *mut u8, layout) };
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn Move(destination: *mut u8, source: *mut u8, size: usize) {
     if destination.is_null() || source.is_null() || size == 0 {
         return;
@@ -77,6 +81,7 @@ pub extern "C" fn Move(destination: *mut u8, source: *mut u8, size: usize) {
     unsafe { ptr::copy(source, destination, size) };
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn Copy(destination: *mut u8, source: *const u8, size: usize) {
     if destination.is_null() || source.is_null() || size == 0 {
         return;
@@ -86,6 +91,7 @@ pub extern "C" fn Copy(destination: *mut u8, source: *const u8, size: usize) {
     unsafe { ptr::copy_nonoverlapping(source, destination, size) };
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn Clone(source: *const u8, size: usize) -> *mut u8 {
     let clone = Malloc(size);
 
@@ -94,6 +100,7 @@ pub extern "C" fn Clone(source: *const u8, size: usize) -> *mut u8 {
     return clone;
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn Zero(addr: *mut u8, size: usize) {
     if addr.is_null() {
         return;

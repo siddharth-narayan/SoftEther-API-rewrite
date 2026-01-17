@@ -21,6 +21,7 @@
 
 // void XorData(void *dst, void *src1, void *src2, UINT size);
 
+#[unsafe(no_mangle)]
 extern "C" fn XorData(destination: *mut u8, source_a: *mut u8, source_b: *mut u8, size: usize) {
     if destination.is_null() || source_a.is_null() || source_b.is_null() {
         return;
