@@ -14,15 +14,15 @@
 // void InitFifo(); // Not exported?
 // void SetFifoCurrentReallocMemSize(UINT size);
 
-pub extern "C" fn ReadFifo(fifo: *mut Fifo, out: *mut u8, size: usize) {}
-pub extern "C" fn ReadFifo(fifo: *mut Fifo) {}
-pub extern "C" fn ReadFifo(fifo: *mut Fifo) {}
-pub extern "C" fn ReadFifo(fifo: *mut Fifo) {}
-pub extern "C" fn WriteFifo(fifo: *mut Fifo, out: *mut u8, size: usize) {}
-pub extern "C" fn FifoSize(fifo: *mut Fifo) {}
-pub extern "C" fn ReleaseFifo(fifo: *mut Fifo) {}
-pub extern "C" fn NewFifo() {}
-pub extern "C" fn NewFifoFast() {}
-pub extern "C" fn SetFifoCurrentReallocMemSize(size: usize) {
-    // Can ignore for now?
-}
+// pub extern "C" fn ReadFifo(fifo: *mut Fifo, out: *mut u8, size: usize) {}
+// pub extern "C" fn ReadFifo(fifo: *mut Fifo) {}
+// pub extern "C" fn ReadFifo(fifo: *mut Fifo) {}
+// pub extern "C" fn ReadFifo(fifo: *mut Fifo) {}
+// pub extern "C" fn WriteFifo(fifo: *mut Fifo, out: *mut u8, size: usize) {}
+// pub extern "C" fn FifoSize(fifo: *mut Fifo) {}
+// pub extern "C" fn ReleaseFifo(fifo: *mut Fifo) {}
+// pub extern "C" fn NewFifo() {}
+// pub extern "C" fn NewFifoFast() {}
+// pub extern "C" fn SetFifoCurrentReallocMemSize(size: usize) {
+//     // Can ignore for now?
+// }

@@ -1,7 +1,9 @@
-use std::{cmp::Ordering, ffi::c_void};
+use std::{cmp::Ordering, ffi::c_void, ptr::null_mut};
 
-type CompareFunction<T> = Box<dyn for<'a, 'b>Fn(&'a T, &'b T) -> Ordering>;
-type FfiCompareFunction = extern "C" fn(*const c_void, *const c_void ) -> i32;
+use crate::util::RawPtr;
+
+type CompareFunction<T> = Box<dyn for<'a, 'b> Fn(&'a T, &'b T) -> Ordering>;
+type FfiCompareFunction = extern "C" fn(*const c_void, *const c_void) -> i32;
 
 struct List<T> {
     sorted: bool,
@@ -9,25 +11,24 @@ struct List<T> {
     compare_function: CompareFunction<T>,
 }
 
-
-
 impl<T: Ord> List<T> {
     pub fn new() -> List<T> {
-        List { sorted: true, items: Vec::new(), compare_function: Box::new(|item_1: &T, item_2: &T| {
-            item_1.cmp(item_2)
-        })}
+        List {
+            sorted: true,
+            items: Vec::new(),
+            compare_function: Box::new(|item_1: &T, item_2: &T| item_1.cmp(item_2)),
+        }
     }
 }
 
 impl<T> List<T> {
-    
     pub fn new_with_ffi_cmp(compare: FfiCompareFunction) -> List<T> {
-        let rustified_compare_func = Box::new( move|item_1: &T, item_2: &T| {
+        let rustified_compare_func = Box::new(move |item_1: &T, item_2: &T| {
             let (item_1, item_2) = (item_1 as *const T, item_2 as *const T);
             let (item_1, item_2) = (item_1 as *const c_void, item_2 as *const c_void);
 
             let result = (compare)(item_1, item_2);
-            
+
             if result < 0 {
                 std::cmp::Ordering::Less
             } else if result > 0 {
@@ -37,7 +38,11 @@ impl<T> List<T> {
             }
         });
 
-        List { sorted: true, items: Vec::new(), compare_function: rustified_compare_func}
+        List {
+            sorted: true,
+            items: Vec::new(),
+            compare_function: rustified_compare_func,
+        }
     }
 
     pub fn as_mut_ptr(self) -> *mut List<T> {
@@ -49,14 +54,24 @@ impl<T> List<T> {
         unsafe { drop(Box::from_raw(ptr)) }
     }
 
+    pub fn add(&mut self, item: T) {
+        self.items.push(item);
+    }
+
+    pub fn delete(&mut self, index: usize) {
+        self.items.remove(index);
+    }
+
+    pub fn get(&mut self, index: usize) -> Option<&T> {
+        self.items.get(index)
+    }
+
     pub fn sort(&mut self) {
         self.items.sort_unstable_by(&self.compare_function)
     }
 
     pub fn search(&self, item: &T) -> Option<usize> {
-        let search_closure = | cmp_item: &T | {
-            (&self.compare_function)(item, cmp_item)
-        };
+        let search_closure = |cmp_item: &T| (&self.compare_function)(item, cmp_item);
 
         match self.items.binary_search_by(search_closure) {
             Ok(size) => Some(size),
@@ -64,7 +79,6 @@ impl<T> List<T> {
         }
     }
 }
-
 
 // void *Search(LIST *o, void *target);
 // void Sort(LIST *o);
@@ -143,88 +157,206 @@ impl<T> List<T> {
 // bool IsInHashListKey(HASH_LIST *h, UINT key);
 // void *HashListKeyToPointer(HASH_LIST *h, UINT key);
 
-pub extern "C" fn Search(o: *mut List, target: *mut c_void) -> *mut c_void {}
-pub extern "C" fn Sort(o: *mut List) {}
-pub extern "C" fn Add(o: *mut List, p: *mut c_void) {}
-pub extern "C" fn AddDistinct(o: *mut List, p: *mut c_void) {}
-pub extern "C" fn Insert(o: *mut List, p: *mut c_void) {}
-pub extern "C" fn Delete(o: *mut List, p: *mut c_void) -> bool {}
-pub extern "C" fn DeleteAll(o: *mut List) {}
-pub extern "C" fn LockList(o: *mut List) {}
-pub extern "C" fn UnlockList(o: *mut List) {}
-pub extern "C" fn ReleaseList(o: *mut List) {}
-pub extern "C" fn CleanupList(o: *mut List) {}
+pub extern "C" fn Search(ptr: *mut List<RawPtr>, target: RawPtr) -> RawPtr {
+    let list = unsafe { &mut *ptr };
 
-pub extern "C" fn NewList(cmp: Compare) -> *mut List {}
-pub extern "C" fn NewListFast(cmp: Compare) -> *mut List {}
-pub extern "C" fn NewListEx(cmp: Compare, fast: bool) -> *mut List {}
-pub extern "C" fn NewListEx2(cmp: Compare, fast: bool, fast_malloc: bool) -> *mut List {}
-pub extern "C" fn NewListSingle(p: *mut c_void) -> *mut List {}
-pub extern "C" fn NewEntryList(src: *const c_char, key_separator: *const c_char, value_separator: *const c_char) -> *mut List {}
-pub extern "C" fn EntryListHasKey(o: *mut List, key: *const c_char) -> bool {}
-pub extern "C" fn EntryListStrValue(o: *mut List, key: *const c_char) -> *mut c_char {}
-pub extern "C" fn EntryListIntValue(o: *mut List, key: *const c_char) -> u32 {}
-pub extern "C" fn FreeEntryList(o: *mut List) {}
-pub extern "C" fn CloneList(o: *mut List) -> *mut List {}
-pub extern "C" fn CopyToArray(o: *mut List, p: *mut c_void) {}
-pub extern "C" fn ToArray(o: *mut List) -> *mut c_void {}
-pub extern "C" fn ToArrayEx(o: *mut List, fast: bool) -> *mut c_void {}
+    if let Some(idx) = list.search(&target) {
+        return list.get(idx).unwrap_or(&null_mut()).clone();
+    }
 
-pub extern "C" fn CompareStr(p1: *mut c_void, p2: *mut c_void) -> i32 {}
-pub extern "C" fn InsertStr(o: *mut List, str: *const c_char) -> bool {}
-pub extern "C" fn CompareUniStr(p1: *mut c_void, p2: *mut c_void) -> i32 {}
+    return null_mut()
+}
 
-pub extern "C" fn IsInList(o: *mut List, p: *mut c_void) -> bool {}
-pub extern "C" fn IsInListKey(o: *mut List, key: u32) -> bool {}
-pub extern "C" fn ListKeyToPointer(o: *mut List, key: u32) -> *mut c_void {}
-pub extern "C" fn IsInListStr(o: *mut List, str: *const c_char) -> bool {}
-pub extern "C" fn IsInListUniStr(o: *mut List, str: *const u16) -> bool {}
-pub extern "C" fn ReplaceListPointer(o: *mut List, oldptr: *mut c_void, newptr: *mut c_void) -> bool {}
+pub extern "C" fn Sort<T>(ptr: *mut List<T>) {
+    let list = unsafe { &mut *ptr };
 
-pub extern "C" fn AddInt(o: *mut List, i: u32) {}
-pub extern "C" fn AddInt64(o: *mut List, i: u64) {}
-pub extern "C" fn AddIntDistinct(o: *mut List, i: u32) {}
-pub extern "C" fn AddInt64Distinct(o: *mut List, i: u64) {}
-pub extern "C" fn DelInt(o: *mut List, i: u32) {}
-pub extern "C" fn ReleaseIntList(o: *mut List) {}
-pub extern "C" fn ReleaseInt64List(o: *mut List) {}
-pub extern "C" fn IsIntInList(o: *mut List, i: u32) -> bool {}
-pub extern "C" fn IsInt64InList(o: *mut List, i: u64) -> bool {}
-pub extern "C" fn NewIntList(sorted: bool) -> *mut List {}
-pub extern "C" fn NewInt64List(sorted: bool) -> *mut List {}
+    list.sort();
+}
 
-pub extern "C" fn CompareInt(p1: *mut c_void, p2: *mut c_void) -> i32 {}
-pub extern "C" fn CompareInt64(p1: *mut c_void, p2: *mut c_void) -> i32 {}
-pub extern "C" fn InsertInt(o: *mut List, i: u32) {}
-pub extern "C" fn InsertIntDistinct(o: *mut List, i: u32) {}
+pub extern "C" fn Add(ptr: *mut List<RawPtr>, value: RawPtr) {
+    let list = unsafe { &mut *ptr };
 
-// Candidate
-pub extern "C" fn NewCandidateList() -> *mut List {}
-pub extern "C" fn FreeCandidateList(o: *mut List) {}
-pub extern "C" fn CompareCandidate(p1: *mut c_void, p2: *mut c_void) -> i32 {}
-pub extern "C" fn AddCandidate(o: *mut List, str: *const u16, num_max: u32) {}
-pub extern "C" fn CandidateToBuf(o: *mut List) -> *mut Buffer {}
-pub extern "C" fn BufToCandidate(b: *mut Buffer) -> *mut List {}
+    list.add(value);
+}
 
-// Strmap
-pub extern "C" fn NewStrMap() -> *mut List {}
-pub extern "C" fn StrMapSearch(map: *mut List, key: *const c_char) -> *mut c_void {}
+pub extern "C" fn AddDistinct(ptr: *mut List<RawPtr>, item: RawPtr) {
+    let list = unsafe { &mut *ptr };
 
-// HashList
-pub extern "C" fn NewHashList(get_hash_proc: GetHash, compare_proc: Compare, bits: u32, make_list: bool) -> *mut HashList {}
-pub extern "C" fn ReleaseHashList(h: *mut HashList) {}
-pub extern "C" fn CleanupHashList(h: *mut HashList) {}
-pub extern "C" fn AddHash(h: *mut HashList, p: *mut c_void) {}
-pub extern "C" fn DeleteHash(h: *mut HashList, p: *mut c_void) -> bool {}
-pub extern "C" fn SearchHash(h: *mut HashList, t: *mut c_void) -> *mut c_void {}
-pub extern "C" fn CalcHashForHashList(h: *mut HashList, p: *mut c_void) -> u32 {}
-pub extern "C" fn HashListToArray(h: *mut HashList, num: *mut u32) -> *mut *mut c_void {}
-pub extern "C" fn LockHashList(h: *mut HashList) {}
-pub extern "C" fn UnlockHashList(h: *mut HashList) {}
-pub extern "C" fn IsInHashListKey(h: *mut HashList, key: u32) -> bool {}
-pub extern "C" fn HashListKeyToPointer(h: *mut HashList, key: u32) -> *mut c_void {}
+    if None == list.search(&item) {
+        list.add(item);
+    }
+}
+
+pub extern "C" fn Insert(ptr: *mut List<RawPtr>, item: RawPtr) {}
+
+pub extern "C" fn Delete(ptr: *mut List<RawPtr>, item: RawPtr) -> bool {
+    let list = unsafe { &mut *ptr };
+
+    if let Some(index) = list.search(&item) {
+        list.delete(index);
+
+        return true;
+    }
+
+    return false;
+}
+
+pub extern "C" fn DeleteAll(ptr: *mut List<RawPtr>) {
+    let list = unsafe { &mut *ptr };
+
+    list.items.clear();
+}
+
+pub extern "C" fn LockList<T>(ptr: *mut List<T>) {}
+
+pub extern "C" fn UnlockList<T>(ptr: *mut List<T>) {}
+
+pub extern "C" fn ReleaseList<T>(ptr: *mut List<T>) {
+    List::free_mut_ptr(ptr);
+}
+
+// UNUSED
+// pub extern "C" fn CleanupList(ptr: *mut List) {}
+
+pub extern "C" fn NewList(cmp: FfiCompareFunction) -> *mut List<RawPtr> {
+    List::new().as_mut_ptr()
+}
+
+pub extern "C" fn NewListFast(cmp: FfiCompareFunction) -> *mut List<RawPtr> {
+    NewList(cmp)
+}
+
+// UNUSED
+// pub extern "C" fn NewListEx(cmp: Compare, fast: bool) -> *mut List {}
+
+// UNUSED
+// pub extern "C" fn NewListEx2(cmp: Compare, fast: bool, fast_malloc: bool) -> *mut List {}
+
+pub extern "C" fn NewListSingle(p: RawPtr) -> *mut List<RawPtr> {
+    let mut l = List::new();
+    l.add(p);
+
+    l.as_mut_ptr()
+}
+
+// ALL THIS JUST COMMENTED OUT FOR NOW
+
+// pub extern "C" fn NewEntryList(src: *const c_char, key_separator: *const c_char, value_separator: *const c_char) -> *mut List {}
+
+// pub extern "C" fn EntryListHasKey(ptr: *mut List, key: *const c_char) -> bool {}
+
+// pub extern "C" fn EntryListStrValue(ptr: *mut List, key: *const c_char) -> *mut c_char {}
+
+// pub extern "C" fn EntryListIntValue(ptr: *mut List, key: *const c_char) -> u32 {}
+
+// pub extern "C" fn FreeEntryList(ptr: *mut List) {}
+
+// pub extern "C" fn CloneList(ptr: *mut List) -> *mut List {}
+
+// // pub extern "C" fn CopyToArray(ptr: *mut List, p: RawPtr) {}
+
+// pub extern "C" fn ToArray(ptr: *mut List) -> RawPtr {}
+
+// pub extern "C" fn ToArrayEx(ptr: *mut List, fast: bool) -> RawPtr {}
+
+// pub extern "C" fn CompareStr(p1: RawPtr, p2: RawPtr) -> i32 {}
+
+// pub extern "C" fn InsertStr(ptr: *mut List, str: *const c_char) -> bool {}
+
+// pub extern "C" fn CompareUniStr(p1: RawPtr, p2: RawPtr) -> i32 {}
+
+// pub extern "C" fn IsInList(ptr: *mut List, p: RawPtr) -> bool {}
+
+// pub extern "C" fn IsInListKey(ptr: *mut List, key: u32) -> bool {}
+
+// pub extern "C" fn ListKeyToPointer(ptr: *mut List, key: u32) -> RawPtr {}
+
+// pub extern "C" fn IsInListStr(ptr: *mut List, str: *const c_char) -> bool {}
+
+// pub extern "C" fn IsInListUniStr(ptr: *mut List, str: *const u16) -> bool {}
+
+// pub extern "C" fn ReplaceListPointer(ptr: *mut List, oldptr: RawPtr, newptr: RawPtr) -> bool {}
+
+// pub extern "C" fn AddInt(ptr: *mut List, i: u32) {}
+
+// pub extern "C" fn AddInt64(ptr: *mut List, i: u64) {}
+
+// pub extern "C" fn AddIntDistinct(ptr: *mut List, i: u32) {}
+
+// pub extern "C" fn AddInt64Distinct(ptr: *mut List, i: u64) {}
+
+// pub extern "C" fn DelInt(ptr: *mut List, i: u32) {}
+
+// pub extern "C" fn ReleaseIntList(ptr: *mut List) {}
+
+// pub extern "C" fn ReleaseInt64List(ptr: *mut List) {}
+
+// pub extern "C" fn IsIntInList(ptr: *mut List, i: u32) -> bool {}
+
+// pub extern "C" fn IsInt64InList(ptr: *mut List, i: u64) -> bool {}
+
+// pub extern "C" fn NewIntList(sorted: bool) -> *mut List {}
+
+// pub extern "C" fn NewInt64List(sorted: bool) -> *mut List {}
+
+// pub extern "C" fn CompareInt(p1: RawPtr, p2: RawPtr) -> i32 {}
+
+// pub extern "C" fn CompareInt64(p1: RawPtr, p2: RawPtr) -> i32 {}
+
+// pub extern "C" fn InsertInt(ptr: *mut List, i: u32) {}
+
+// pub extern "C" fn InsertIntDistinct(ptr: *mut List, i: u32) {}
+
+// // Candidate
+
+// pub extern "C" fn NewCandidateList() -> *mut List {}
+
+// pub extern "C" fn FreeCandidateList(ptr: *mut List) {}
+
+// pub extern "C" fn CompareCandidate(p1: RawPtr, p2: RawPtr) -> i32 {}
+
+// pub extern "C" fn AddCandidate(ptr: *mut List, str: *const u16, num_max: u32) {}
+
+// pub extern "C" fn CandidateToBuf(ptr: *mut List) -> *mut Buffer {}
+
+// pub extern "C" fn BufToCandidate(b: *mut Buffer) -> *mut List {}
+
+// // Strmap
+
+// pub extern "C" fn NewStrMap() -> *mut List {}
+
+// pub extern "C" fn StrMapSearch(map: *mut List, key: *const c_char) -> RawPtr {}
+
+// // HashList
+
+// pub extern "C" fn NewHashList(get_hash_proc: GetHash, compare_proc: Compare, bits: u32, make_list: bool) -> *mut List<Hash> {}
+
+// pub extern "C" fn ReleaseHashList(h: *mut List<Hash>) {}
+
+// pub extern "C" fn CleanupHashList(h: *mut List<Hash>) {}
+
+// pub extern "C" fn AddHash(h: *mut List<Hash>, p: RawPtr) {}
+
+// pub extern "C" fn DeleteHash(h: *mut List<Hash>, p: RawPtr) -> bool {}
+
+// pub extern "C" fn SearchHash(h: *mut List<Hash>, t: RawPtr) -> RawPtr {}
+
+// pub extern "C" fn CalcHashForHashList(h: *mut List<Hash>, p: RawPtr) -> u32 {}
+
+// pub extern "C" fn HashListToArray(h: *mut List<Hash>, num: *mut u32) -> *mut RawPtr {}
+
+// pub extern "C" fn LockHashList(h: *mut List<Hash>) {}
+
+// pub extern "C" fn UnlockHashList(h: *mut List<Hash>) {}
+
+// pub extern "C" fn IsInHashListKey(h: *mut List<Hash>, key: u32) -> bool {}
+
+// pub extern "C" fn HashListKeyToPointer(h: *mut List<Hash>, key: u32) -> RawPtr {}
 
 // StrList
+
 // LIST *NewStrList();
+
 // void ReleaseStrList(LIST *o);
+
 // bool AddStrToStrListDistinct(LIST *o, char *str);

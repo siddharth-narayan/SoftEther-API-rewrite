@@ -13,7 +13,7 @@
 
 use std::{collections::VecDeque, ffi::c_void, ptr::null_mut, sync::Mutex};
 
-use crate::mem::mem::{Clone, Copy};
+use crate::{mem::mem::{Clone, Copy}, util::RawPtr};
 
 struct Queue<T> {
     lock: Mutex<()>,
@@ -56,7 +56,7 @@ impl<T> Queue<T> {
     }
 }
 
-pub extern "C" fn GetNext(ptr: *mut Queue<*mut c_void>) -> *mut c_void {
+pub extern "C" fn GetNext(ptr: *mut Queue<RawPtr>) -> RawPtr {
     let queue = unsafe {&mut *ptr};
 
     if let Some(next) = queue.next() {
@@ -66,53 +66,53 @@ pub extern "C" fn GetNext(ptr: *mut Queue<*mut c_void>) -> *mut c_void {
     }
 }
 
-pub extern "C" fn GetNextWithLock(ptr: *mut Queue<*mut c_void>) -> *mut c_void {
+pub extern "C" fn GetNextWithLock(ptr: *mut Queue<RawPtr>) -> RawPtr {
     GetNext(ptr)
 }
 
-pub extern "C" fn InsertQueue(ptr: *mut Queue<*mut c_void>, p: *mut c_void) {
+pub extern "C" fn InsertQueue(ptr: *mut Queue<RawPtr>, p: RawPtr) {
     let queue = unsafe {&mut *ptr};
 
     queue.push(p);
 }
 
-pub extern "C" fn InsertQueueWithLock(ptr: *mut Queue<*mut c_void>, p: *mut c_void) {
+pub extern "C" fn InsertQueueWithLock(ptr: *mut Queue<RawPtr>, p: RawPtr) {
     InsertQueue(ptr, p);
 }
 
 
-pub extern "C" fn InsertQueueInt(ptr: *mut Queue<*mut c_void>, value: u32) {
+pub extern "C" fn InsertQueueInt(ptr: *mut Queue<RawPtr>, value: u32) {
     let value_ptr: *const u32 = &value;
     let value_ptr = value_ptr as *const u8;
     
     let new_value = Clone(value_ptr, 4);
-    let new_value = new_value as *mut c_void;
+    let new_value = new_value as RawPtr;
 
 
     InsertQueue(ptr, new_value);
 }
 
-pub extern "C" fn LockQueue(ptr: *mut Queue<*mut c_void>) {}
-pub extern "C" fn UnlockQueue(ptr: *mut Queue<*mut c_void>) {}
+pub extern "C" fn LockQueue(ptr: *mut Queue<RawPtr>) {}
+pub extern "C" fn UnlockQueue(ptr: *mut Queue<RawPtr>) {}
 
-pub extern "C" fn ReleaseQueue(ptr: *mut Queue<*mut c_void>) {
+pub extern "C" fn ReleaseQueue(ptr: *mut Queue<RawPtr>) {
     Queue::free_mut_ptr(ptr);
 }
 
-pub extern "C" fn CleanupQueue(ptr: *mut Queue<*mut c_void>) {
+pub extern "C" fn CleanupQueue(ptr: *mut Queue<RawPtr>) {
     Queue::free_mut_ptr(ptr); // Check difference with ReleaseQueue
 }
 
-pub extern "C" fn NewQueue() -> *mut Queue<*mut c_void> {
+pub extern "C" fn NewQueue() -> *mut Queue<RawPtr> {
     Queue::new().as_mut_ptr()
 }
 
-pub extern "C" fn NewQueueFast() -> *mut Queue<*mut c_void> {
+pub extern "C" fn NewQueueFast() -> *mut Queue<RawPtr> {
     Queue::new().as_mut_ptr()
 }
 
-pub extern "C" fn GetQueueNum(ptr: *mut Queue<*mut c_void>) -> usize {
-    let queue = unsafe {&mut *q};
+pub extern "C" fn GetQueueNum(ptr: *mut Queue<RawPtr>) -> usize {
+    let queue = unsafe {&mut *ptr};
 
     queue.len()
 }

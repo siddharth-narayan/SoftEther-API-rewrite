@@ -1,4 +1,5 @@
 mod str;
+mod util;
 mod mem;
 
 fn main() {

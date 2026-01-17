@@ -266,11 +266,13 @@ pub extern "C" fn ReadDump(filename: *const i8) -> *mut Buffer {
     }
 }
 
-pub extern "C" fn ReadDumpWithMaxSize(filename: *const CStr, size: usize) -> *mut Buffer {}
+// TODO
+// pub extern "C" fn ReadDumpWithMaxSize(filename: *const CStr, size: usize) -> *mut Buffer {}
 
-pub extern "C" fn ReadDumpW(filename: *const i8) -> *mut Buffer {
-    // Filename is made of wchar_t -- handle with rust properly
-}
+// TODO
+// pub extern "C" fn ReadDumpW(filename: *const i8) -> *mut Buffer {
+//     // Filename is made of wchar_t -- handle with rust properly
+// }
 
 // pub extern "C" fn ReadDumpExW(buffer: *mut Buffer, out: *mut u8, size: usize) {
 
@@ -280,13 +282,15 @@ pub extern "C" fn ReadDumpW(filename: *const i8) -> *mut Buffer {
 
 // }
 
-pub extern "C" fn ReadRemainBuf(buffer: *mut Buffer) -> *mut Buffer {
-    let buffer = unsafe { &mut *buffer };
-}
+// TODO
+// pub extern "C" fn ReadRemainBuf(buffer: *mut Buffer) -> *mut Buffer {
+//     let buffer = unsafe { &mut *buffer };
+// }
 
-pub extern "C" fn ReadBufRemainSize(buffer: *mut Buffer) -> u32 {
-    let buffer = unsafe { &mut *buffer };
-}
+// TODO
+// pub extern "C" fn ReadBufRemainSize(buffer: *mut Buffer) -> u32 {
+//     let buffer = unsafe { &mut *buffer };
+// }
 
 pub fn NewBuf() -> *mut Buffer {
     let buffer = Buffer::new();

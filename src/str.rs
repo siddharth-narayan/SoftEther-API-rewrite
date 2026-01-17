@@ -1,46 +1,52 @@
 use std::ffi::{CStr, CString, c_char};
 
-pub fn url_decode(url: &CStr) -> CString {
-    url.to_str().unwrap()
-	for (i = 0;i < len;i++)
-	{
-		char c = url_str[i];
+// pub fn url_decode(url: &CStr) -> CString {
+//     url.to_str().unwrap()
 
-		if (c == '%' && ((i + 2) < len))
-		{
-			char hex_str[8];
-			UINT value;
+// 	for i in 0..len {
+		
+// 	}
 
-			hex_str[0] = url_str[i + 1];
-			hex_str[1] = url_str[i + 2];
-			hex_str[2] = 0;
 
-			value = HexToInt(hex_str);
+// 	for (i = 0;i < len;i++)
+// 	{
+// 		char c = url_str[i];
 
-			WriteBufChar(b, (UCHAR)value);
+// 		if (c == '%' && ((i + 2) < len))
+// 		{
+// 			char hex_str[8];
+// 			UINT value;
 
-			i += 2;
-			continue;
-		}
-		else
-		{
-			if (c == '+')
-			{
-				c = ' ';
-			}
-			WriteBufChar(b, c);
-		}
-	}
+// 			hex_str[0] = url_str[i + 1];
+// 			hex_str[1] = url_str[i + 2];
+// 			hex_str[2] = 0;
 
-	WriteBufChar(b, 0);
+// 			value = HexToInt(hex_str);
 
-	ret = CopyStr(b->Buf);
+// 			WriteBufChar(b, (UCHAR)value);
 
-	FreeBuf(b);
+// 			i += 2;
+// 			continue;
+// 		}
+// 		else
+// 		{
+// 			if (c == '+')
+// 			{
+// 				c = ' ';
+// 			}
+// 			WriteBufChar(b, c);
+// 		}
+// 	}
 
-	return ret;
-}
+// 	WriteBufChar(b, 0);
 
-pub extern "C" fn UrlDecode(url: *const c_char) -> *mut c_char {
-    url_decode(url).into_raw()
-}
+// 	ret = CopyStr(b->Buf);
+
+// 	FreeBuf(b);
+
+// 	return ret;
+// }
+
+// pub extern "C" fn UrlDecode(url: *const c_char) -> *mut c_char {
+//     url_decode(url).into_raw()
+// }

@@ -3,5 +3,8 @@ name = "new_mayaqua"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+crate-type = ["staticlib", "cdylib"]
+
 [dependencies]
 cbindgen = "0.29.2"
