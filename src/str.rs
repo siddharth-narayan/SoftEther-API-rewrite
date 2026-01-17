@@ -1,51 +1,31 @@
 use std::ffi::{CStr, CString, c_char};
 
-// pub fn url_decode(url: &CStr) -> CString {
-//     url.to_str().unwrap()
+pub fn url_decode(url: &CStr) -> CString {
+    let string = url.to_str().unwrap();
 
-// 	for i in 0..len {
-		
-// 	}
+    let str_iter = string.as_bytes().iter();
+	
+    let mut final_string = String::new();
 
+    while let Some(char) = str_iter.next() {
+        if *char == b'%' && str_iter.len() >= 2 {
+            let hex: Vec<&u8> = str_iter.take(2).collect();
 
-// 	for (i = 0;i < len;i++)
-// 	{
-// 		char c = url_str[i];
+            let c = u8::from_str_radix(format!("{}{}", hex[0], hex[1]).as_str(), 16).unwrap();
 
-// 		if (c == '%' && ((i + 2) < len))
-// 		{
-// 			char hex_str[8];
-// 			UINT value;
+            let c = c as char;
+            
+            final_string.extend(std::iter::once(c));
+            str_iter.skip(2);
+        }
 
-// 			hex_str[0] = url_str[i + 1];
-// 			hex_str[1] = url_str[i + 2];
-// 			hex_str[2] = 0;
-
-// 			value = HexToInt(hex_str);
-
-// 			WriteBufChar(b, (UCHAR)value);
-
-// 			i += 2;
-// 			continue;
-// 		}
-// 		else
-// 		{
-// 			if (c == '+')
-// 			{
-// 				c = ' ';
-// 			}
-// 			WriteBufChar(b, c);
-// 		}
-// 	}
-
-// 	WriteBufChar(b, 0);
-
-// 	ret = CopyStr(b->Buf);
-
-// 	FreeBuf(b);
-
-// 	return ret;
-// }
+        if *char == b'+' {
+            final_string.extend(std::iter::once(' '));
+        }
+    }
+    
+    final_string
+}
 
 // pub extern "C" fn UrlDecode(url: *const c_char) -> *mut c_char {
 //     url_decode(url).into_raw()
