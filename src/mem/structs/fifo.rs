@@ -1,3 +1,110 @@
+use std::collections::VecDeque;
+
+use crate::util::RawPtr;
+use crate::mem::structs::buf::Buffer;
+
+pub struct Fifo<T> {
+    _internal: VecDeque<T>
+}
+
+impl<T: Copy> Fifo<T> {
+    pub fn new() -> Fifo<T> {
+        Fifo { _internal: VecDeque::new() }
+    }
+
+    pub fn as_mut_ptr(self) -> *mut Fifo<T> {
+        let boxed = Box::new(self);
+        Box::into_raw(boxed)
+    }
+
+    pub fn free_mut_ptr(ptr: *mut Fifo<T>) {
+        unsafe { drop(Box::from_raw(ptr)) }
+    }
+
+    pub fn size(&self) -> usize {
+        self._internal.len()
+    }
+
+    pub fn read(&mut self, size: usize) -> Option<Vec<u8>> {
+
+        return None
+    }
+
+    pub fn read_all(&mut self) -> Buffer {
+        let out = Buffer::new();
+
+        out
+    }
+
+    pub fn write(&mut self, buf: &[T]) {
+        let mut iter = buf.iter();
+
+        while let Some(item) = iter.next() {
+            self._internal.push_back(item.clone());
+        }
+        
+    }
+
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ReadFifo(ptr: *mut Fifo<RawPtr>, p: RawPtr, size: usize) {
+    let fifo = unsafe { &mut *ptr };
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ReadFifoAll(ptr: *mut Fifo<RawPtr>) -> *mut Buffer {
+    let fifo = unsafe { &mut *ptr };
+
+    fifo.read_all().as_mut_ptr()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ShrinkFifoMemory(_: RawPtr) {
+    // Leaving unimplemented because I don't care about shrinking memory
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn FifoPtr(ptr: *mut Fifo<RawPtr>) {
+    let fifo = unsafe { &mut *ptr };
+    // Send over underlying buf
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn WriteFifo(ptr: *mut Fifo<RawPtr>, content: RawPtr, size: usize) {
+    let fifo = unsafe { &mut *ptr };
+    // TODO: *copy* data from content pointer to Fifo
+    // fifo.write()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn FifoSize(ptr: *mut Fifo<RawPtr>) -> usize {
+    let fifo = unsafe { &mut *ptr };
+    
+    fifo.size()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ReleaseFifo(ptr: *mut Fifo<RawPtr>) {
+    let fifo = unsafe { &mut *ptr };
+    Fifo::free_mut_ptr(ptr)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn NewFifo() -> *mut Fifo<RawPtr> {
+    Fifo::<RawPtr>::new().as_mut_ptr()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn NewFifoFast() -> *mut Fifo<RawPtr> {
+    NewFifo()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn SetFifoCurrentReallocMemSize(size: usize) {
+    // Can ignore?
+}
+
 // UINT ReadFifo(FIFO *f, void *p, UINT size);
 // BUF *ReadFifoAll(FIFO *f);
 // void ShrinkFifoMemory(FIFO *f);
@@ -14,15 +121,3 @@
 // void InitFifo(); // Not exported?
 // void SetFifoCurrentReallocMemSize(UINT size);
 
-// pub extern "C" fn ReadFifo(fifo: *mut Fifo, out: *mut u8, size: usize) {}
-// pub extern "C" fn ReadFifo(fifo: *mut Fifo) {}
-// pub extern "C" fn ReadFifo(fifo: *mut Fifo) {}
-// pub extern "C" fn ReadFifo(fifo: *mut Fifo) {}
-// pub extern "C" fn WriteFifo(fifo: *mut Fifo, out: *mut u8, size: usize) {}
-// pub extern "C" fn FifoSize(fifo: *mut Fifo) {}
-// pub extern "C" fn ReleaseFifo(fifo: *mut Fifo) {}
-// pub extern "C" fn NewFifo() {}
-// pub extern "C" fn NewFifoFast() {}
-// pub extern "C" fn SetFifoCurrentReallocMemSize(size: usize) {
-//     // Can ignore for now?
-// }

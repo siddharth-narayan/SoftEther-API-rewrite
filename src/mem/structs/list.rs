@@ -5,7 +5,7 @@ use crate::util::RawPtr;
 type CompareFunction<T> = Box<dyn for<'a, 'b> Fn(&'a T, &'b T) -> Ordering>;
 type FfiCompareFunction = extern "C" fn(*const c_void, *const c_void) -> i32;
 
-struct List<T> {
+pub struct List<T> {
     sorted: bool,
     items: Vec<T>,
     compare_function: CompareFunction<T>,
@@ -169,7 +169,7 @@ pub extern "C" fn Search(ptr: *mut List<RawPtr>, target: RawPtr) -> RawPtr {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn Sort<T>(ptr: *mut List<T>) {
+pub extern "C" fn Sort(ptr: *mut List<RawPtr>) {
     let list = unsafe { &mut *ptr };
 
     list.sort();
@@ -215,13 +215,13 @@ pub extern "C" fn DeleteAll(ptr: *mut List<RawPtr>) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn LockList<T>(ptr: *mut List<T>) {}
+pub extern "C" fn LockList(ptr: *mut List<RawPtr>) {}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn UnlockList<T>(ptr: *mut List<T>) {}
+pub extern "C" fn UnlockList(ptr: *mut List<RawPtr>) {}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ReleaseList<T>(ptr: *mut List<T>) {
+pub extern "C" fn ReleaseList(ptr: *mut List<RawPtr>) {
     List::free_mut_ptr(ptr);
 }
 

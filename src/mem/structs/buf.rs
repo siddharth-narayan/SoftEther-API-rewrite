@@ -33,7 +33,7 @@
 
 use std::{ffi::CStr, fs::File, io::{Read, Write}, path::Path, ptr::{null, null_mut}};
 
-struct Buffer {
+pub struct Buffer {
     buf: Vec<u8>,
     pos: usize,
 }
@@ -75,9 +75,9 @@ impl Buffer {
 
     // Reads a full buffer into another buff
     pub fn read_buf(&mut self, buffer: &mut Buffer, size: usize) {
-        if let data = self.read(size) {
-            buffer.write(data);
-        }
+        let data = self.read(size);
+        
+        buffer.write(data);
     }
 
     pub fn read_buf_offset(&mut self, buffer: &Buffer) {
@@ -138,11 +138,11 @@ impl Buffer {
     }
 
     pub fn write_buf(&mut self, buffer: &Buffer) {
-        self.write(&buffer.clone().buf.as_slice());
+        self.write(buffer.clone().buf.as_slice());
     }
 
     pub fn write_buf_offset(&mut self, buffer: &Buffer) {
-        self.write(&buffer.clone().buf[buffer.pos..]);
+        self.write(&(buffer.clone().buf[buffer.pos..]));
     }
 
     pub fn write_u8(&mut self, byte: u8) {

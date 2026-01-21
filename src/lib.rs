@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 mod str;
 mod util;
 mod mem;
