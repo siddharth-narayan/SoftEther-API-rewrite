@@ -1,103 +1,62 @@
-// PACK *NewPack();
-// bool AddElement(PACK *p, ELEMENT *e);
-// void DelElement(PACK *p, char *name);
-// bool IsElement(PACK *p, char *name);
-// ELEMENT *GetElement(PACK *p, char *name, UINT type);
-// void FreePack(PACK *p);
-// ELEMENT *NewElement(char *name, UINT type, UINT num_value, VALUE **values);
-// VALUE *NewIntValue(UINT i);
-// VALUE *NewDataValue(void *data, UINT size);
-// VALUE *NewStrValue(char *str);
-// VALUE *NewUniStrValue(wchar_t *str);
-// void FreeValue(VALUE *v, UINT type);
-// int ComparePackName(void *p1, void *p2);
-// void FreeElement(ELEMENT *e);
-// UINT GetValueNum(ELEMENT *e);
-// UINT GetIntValue(ELEMENT *e, UINT index);
-// UINT64 GetInt64Value(ELEMENT *e, UINT index);
-// char *GetStrValue(ELEMENT *e, UINT index);
-// wchar_t *GetUniStrValue(ELEMENT *e, UINT index);
-// UINT GetDataValueSize(ELEMENT *e, UINT index);
-// void *GetDataValue(ELEMENT *e, UINT index);
-// BUF *PackToBuf(PACK *p);
-// void WritePack(BUF *b, PACK *p);
-// void WriteElement(BUF *b, ELEMENT *e);
-// void WriteValue(BUF *b, VALUE *v, UINT type);
-// PACK *BufToPack(BUF *b);
-// bool ReadPack(BUF *b, PACK *p);
-// ELEMENT *ReadElement(BUF *b);
-// VALUE *ReadValue(BUF *b, UINT type);
-// void Bit160ToStr(char *str, UCHAR *data);
-// VALUE *NewInt64Value(UINT64 i);
-// TOKEN_LIST *GetPackElementNames(PACK *p);
-// X *PackGetX(PACK *p, char *name);
-// LIST *PackGetXList(PACK *p, char *name);
-// K *PackGetK(PACK *p, char *name);
-// ELEMENT *PackAddX(PACK *p, char *name, X *x);
-// ELEMENT *PackAddXList(PACK *p, char *name, LIST *chain);
-// ELEMENT *PackAddK(PACK *p, char *name, K *k);
-// ELEMENT *PackAddStr(PACK *p, char *name, char *str);
-// ELEMENT *PackAddStrEx(PACK *p, char *name, char *str, UINT index, UINT total);
-// ELEMENT *PackAddUniStr(PACK *p, char *name, wchar_t *unistr);
-// ELEMENT *PackAddUniStrEx(PACK *p, char *name, wchar_t *unistr, UINT index, UINT total);
-// ELEMENT *PackAddInt(PACK *p, char *name, UINT i);
-// ELEMENT *PackAddNum(PACK *p, char *name, UINT num);
-// ELEMENT *PackAddIntEx(PACK *p, char *name, UINT i, UINT index, UINT total);
-// ELEMENT *PackAddInt64(PACK *p, char *name, UINT64 i);
-// ELEMENT *PackAddInt64Ex(PACK *p, char *name, UINT64 i, UINT index, UINT total);
-// ELEMENT *PackAddTime64(PACK *p, char *name, UINT64 i);
-// ELEMENT *PackAddTime64Ex(PACK *p, char *name, UINT64 i, UINT index, UINT total);
-// ELEMENT *PackAddData(PACK *p, char *name, void *data, UINT size);
-// ELEMENT *PackAddDataEx(PACK *p, char *name, void *data, UINT size, UINT index, UINT total);
-// ELEMENT *PackAddBuf(PACK *p, char *name, BUF *b);
-// ELEMENT *PackAddBufEx(PACK *p, char *name, BUF *b, UINT index, UINT total);
-// UINT PackGetStrSize(PACK *p, char *name);
-// UINT PackGetStrSizeEx(PACK *p, char *name, UINT index);
-// bool PackGetStr(PACK *p, char *name, char *str, UINT size);
-// bool PackGetStrEx(PACK *p, char *name, char *str, UINT size, UINT index);
-// bool PackGetUniStr(PACK *p, char *name, wchar_t *unistr, UINT size);
-// bool PackGetUniStrEx(PACK *p, char *name, wchar_t *unistr, UINT size, UINT index);
-// bool PackCmpStr(PACK *p, char *name, char *str);
-// UINT PackGetIndexCount(PACK *p, char *name);
-// UINT PackGetInt(PACK *p, char *name);
-// UINT PackGetNum(PACK *p, char *name);
-// UINT PackGetIntEx(PACK *p, char *name, UINT index);
-// UINT64 PackGetInt64(PACK *p, char *name);
-// UINT64 PackGetInt64Ex(PACK *p, char *name, UINT index);
-// UINT PackGetDataSizeEx(PACK *p, char *name, UINT index);
-// UINT PackGetDataSize(PACK *p, char *name);
-// bool PackGetData(PACK *p, char *name, void *data);
-// bool PackGetDataEx(PACK *p, char *name, void *data, UINT index);
-// BUF *PackGetBuf(PACK *p, char *name);
-// BUF *PackGetBufEx(PACK *p, char *name, UINT index);
-// bool PackGetBool(PACK *p, char *name);
-// ELEMENT *PackAddBool(PACK *p, char *name, bool b);
-// ELEMENT *PackAddBoolEx(PACK *p, char *name, bool b, UINT index, UINT total);
-// bool PackGetBoolEx(PACK *p, char *name, UINT index);
-// void PackAddIp(PACK *p, char *name, IP *ip);
-// void PackAddIpEx(PACK *p, char *name, IP *ip, UINT index, UINT total);
-// void PackAddIpEx2(PACK *p, char *name, IP *ip, UINT index, UINT total, bool is_single);
-// bool PackGetIp(PACK *p, char *name, IP *ip);
-// bool PackGetIpEx(PACK *p, char *name, IP *ip, UINT index);
-// UINT PackGetIp32(PACK *p, char *name);
-// UINT PackGetIp32Ex(PACK *p, char *name, UINT index);
-// void PackAddIp32(PACK *p, char *name, UINT ip32);
-// void PackAddIp32Ex(PACK *p, char *name, UINT ip32, UINT index, UINT total);
-// void PackAddIp32Ex2(PACK *p, char *name, UINT ip32, UINT index, UINT total, bool is_single);
-// ELEMENT *PackAddIp6AddrEx(PACK *p, char *name, IPV6_ADDR *addr, UINT index, UINT total);
-// bool PackGetIp6AddrEx(PACK *p, char *name, IPV6_ADDR *addr, UINT index);
-// ELEMENT *PackAddIp6Addr(PACK *p, char *name, IPV6_ADDR *addr);
-// bool PackGetIp6Addr(PACK *p, char *name, IPV6_ADDR *addr);
-// bool PackGetData2(PACK *p, char *name, void *data, UINT size);
-// bool PackGetDataEx2(PACK *p, char *name, void *data, UINT size, UINT index);
-// bool PackIsValueExists(PACK *p, char *name);
-// void PackSetCurrentJsonGroupName(PACK *p, char *json_group_name);
-// ELEMENT *ElementNullSafe(ELEMENT *p);
-// JSON_VALUE *PackToJson(PACK *p);
-// char *PackToJsonStr(PACK *p);
-// PACK *JsonToPack(JSON_VALUE *v);
-// PACK *JsonStrToPack(char *str);
-// void PackArrayElementToJsonArray(JSON_ARRAY *ja, PACK *p, ELEMENT *e, UINT index);
-// void PackElementToJsonObject(JSON_OBJECT *o, PACK *p, ELEMENT *e, UINT index);
-// char *DetermineJsonSuffixForPackElement(ELEMENT *e);
-// bool JsonTryParseValueAddToPack(PACK *p, JSON_VALUE *v, char *v_name, UINT index, UINT total, bool is_single);
+// NewPack()
+// GetElement(PACK*p,char*name,UINTtype)
+// FreePack(PACK*p)
+// PackToBuf(PACK*p)
+// BufToPack(BUF*b)
+// PackGetX(PACK*p,char*name)
+// PackGetXList(PACK*p,char*name)
+// PackGetK(PACK*p,char*name)
+// PackAddX(PACK*p,char*name,X*x)
+// PackAddXList(PACK*p,char*name,LIST*chain)
+// PackAddK(PACK*p,char*name,K*k)
+// PackAddStr(PACK*p,char*name,char*str)
+// PackAddStrEx(PACK*p,char*name,char*str,UINTindex,UINTtotal)
+// PackAddUniStr(PACK*p,char*name,wchar_t*unistr)
+// PackAddUniStrEx(PACK*p,char*name,wchar_t*unistr,UINTindex,UINTtotal)
+// PackAddInt(PACK*p,char*name,UINTi)
+// PackAddNum(PACK*p,char*name,UINTnum)
+// PackAddIntEx(PACK*p,char*name,UINTi,UINTindex,UINTtotal)
+// PackAddInt64(PACK*p,char*name,UINT64i)
+// PackAddInt64Ex(PACK*p,char*name,UINT64i,UINTindex,UINTtotal)
+// PackAddTime64(PACK*p,char*name,UINT64i)
+// PackAddTime64Ex(PACK*p,char*name,UINT64i,UINTindex,UINTtotal)
+// PackAddData(PACK*p,char*name,void*data,UINTsize)
+// PackAddDataEx(PACK*p,char*name,void*data,UINTsize,UINTindex,UINTtotal)
+// PackAddBuf(PACK*p,char*name,BUF*b)
+// PackGetStrSize(PACK*p,char*name)
+// PackGetStrSizeEx(PACK*p,char*name,UINTindex)
+// PackGetStr(PACK*p,char*name,char*str,UINTsize)
+// PackGetStrEx(PACK*p,char*name,char*str,UINTsize,UINTindex)
+// PackGetUniStr(PACK*p,char*name,wchar_t*unistr,UINTsize)
+// PackGetUniStrEx(PACK*p,char*name,wchar_t*unistr,UINTsize,UINTindex)
+// PackGetIndexCount(PACK*p,char*name)
+// PackGetInt(PACK*p,char*name)
+// PackGetNum(PACK*p,char*name)
+// PackGetIntEx(PACK*p,char*name,UINTindex)
+// PackGetInt64(PACK*p,char*name)
+// PackGetInt64Ex(PACK*p,char*name,UINTindex)
+// PackGetDataSizeEx(PACK*p,char*name,UINTindex)
+// PackGetDataSize(PACK*p,char*name)
+// PackGetData(PACK*p,char*name,void*data)
+// PackGetBuf(PACK*p,char*name)
+// PackGetBufEx(PACK*p,char*name,UINTindex)
+// PackGetBool(PACK*p,char*name)
+// PackAddBool(PACK*p,char*name,boolb)
+// PackAddBoolEx(PACK*p,char*name,boolb,UINTindex,UINTtotal)
+// PackGetBoolEx(PACK*p,char*name,UINTindex)
+// PackAddIp(PACK*p,char*name,IP*ip)
+// PackAddIpEx(PACK*p,char*name,IP*ip,UINTindex,UINTtotal)
+// PackGetIp(PACK*p,char*name,IP*ip)
+// PackGetIpEx(PACK*p,char*name,IP*ip,UINTindex)
+// PackGetIp32(PACK*p,char*name)
+// PackGetIp32Ex(PACK*p,char*name,UINTindex)
+// PackAddIp32(PACK*p,char*name,UINTip32)
+// PackAddIp32Ex(PACK*p,char*name,UINTip32,UINTindex,UINTtotal)
+// PackAddIp6AddrEx(PACK*p,char*name,IPV6_ADDR*addr,UINTindex,UINTtotal)
+// PackGetIp6AddrEx(PACK*p,char*name,IPV6_ADDR*addr,UINTindex)
+// PackGetData2(PACK*p,char*name,void*data,UINTsize)
+// PackGetDataEx2(PACK*p,char*name,void*data,UINTsize,UINTindex)
+// PackIsValueExists(PACK*p,char*name)
+// PackSetCurrentJsonGroupName(PACK*p,char*json_group_name)
+// PackToJson(PACK*p)
+// JsonToPack(JSON_VALUE*v)
