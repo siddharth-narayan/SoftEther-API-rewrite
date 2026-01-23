@@ -2,11 +2,9 @@ use crate::table::{self, load_table};
 
 
 #[test]
-fn my_test() {
-    let table = load_table();
+fn table_loaded() {
+    let table_len = table::TABLE.size();
+    assert!(table_len > 100);
 
-    assert!(table.is_some());
-
-    let table = table.unwrap();
-    table.print();
+    println!("strtable_en.stb loaded with {} entries", table_len);
 }

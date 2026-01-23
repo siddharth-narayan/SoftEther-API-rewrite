@@ -8,11 +8,7 @@ use antlr4rust::tree::ParseTree;
 
 use crate::clexer::CLexer;
 use crate::cparser::{
-    CParser, CompilationUnitContextAttrs,
-    DeclarationContextAttrs, DeclaratorContextAttrs,
-    DirectDeclaratorContextAttrs, ExternalDeclarationContextAll,
-    ExternalDeclarationContextAttrs, ExternalDeclarationContextExt, InitDeclaratorContextAttrs,
-    InitDeclaratorListContextAttrs, TranslationUnitContextAttrs,
+    CParser, CompilationUnitContextAttrs, DeclarationContextAll, DeclarationContextAttrs, DeclarationSpecifierContextAttrs, DeclarationSpecifiersContextAttrs, DeclaratorContextAttrs, DirectDeclaratorContextAttrs, ExternalDeclarationContextAll, ExternalDeclarationContextAttrs, ExternalDeclarationContextExt, InitDeclaratorContextAttrs, InitDeclaratorListContextAttrs, TranslationUnitContextAttrs
 };
 
 mod clexer;
@@ -66,14 +62,27 @@ fn parse_content(content: &str) -> Option<Vec<FunctionDesc>> {
 pub fn process_ext_decl_to_func(
     ext_decl: Rc<ExternalDeclarationContextAll>,
 ) -> Option<FunctionDesc> {
+    
+    let declaration = ext_decl.declaration()?;
+
     // This is the base function declaration
-    let function_declaration = ext_decl
-        .declaration()?
+    let declator = declaration
         .initDeclaratorList()?
         .initDeclarator(0)?
-        .declarator()?
-        .directDeclarator()?;
+        .declarator()?;
+
+    let function_declaration = declator.directDeclarator()?;
+    let pointer = if declator.pointer().is_some() { "*" } else { "" };
+    let return_type = process_decl_type(declaration);
+        
 
     let name = function_declaration.directDeclarator()?.get_text();
-    Some((name, function_declaration.get_text()))
+
+    let full_text = format!("{} {} {}", return_type.unwrap_or(String::new()), pointer, function_declaration.get_text());
+    Some((name, full_text))
 }
+
+pub fn process_decl_type(decl: Rc<DeclarationContextAll>) -> Option<String> {
+    Some(decl.declarationSpecifiers()?.declarationSpecifier(0)?.typeSpecifier()?.get_text())
+}
+

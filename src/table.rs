@@ -7,7 +7,7 @@
 
 use std::{cell::LazyCell, collections::HashMap, ffi::{CStr, CString, OsStr, c_char, c_schar, c_ushort}, fs::{File, read_to_string}, os::windows::ffi::OsStrExt, ptr::{null, null_mut}, sync::LazyLock};
 
-static TABLE: LazyLock<Table> = LazyLock::new(Table::new);
+pub static TABLE: LazyLock<Table> = LazyLock::new(load_table);
 
 #[repr(C)]
 struct TOKEN_LIST {
@@ -30,6 +30,10 @@ impl Table {
         }
     }
 
+    pub fn size(&self) -> usize {
+        self._inner.len()    
+    }
+
     pub fn add(&mut self, k: String, v: String) {
         self._inner.insert(k, v);
     }
@@ -40,9 +44,9 @@ impl Table {
 }
 
 // This function loads a "table" which is a set of strings for debugging and showing to the user
-pub fn load_table() -> Option<Table> {
+pub fn load_table() -> Table {
     let mut table = Table::new();
-    let content = read_to_string("strtable_en.stb").ok()?;
+    let content = read_to_string("strtable_en.stb").ok().unwrap_or(String::new());
     
     for mut line in content.lines() {
         line = line.trim_start();
@@ -57,7 +61,7 @@ pub fn load_table() -> Option<Table> {
         }
     }
 
-    Some(table)
+    table
 }
 
 pub extern "C" fn GetTableNameStartWith(str: *const c_char) {

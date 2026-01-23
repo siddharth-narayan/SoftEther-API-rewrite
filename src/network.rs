@@ -214,3 +214,7 @@
 // SetCurrentDDnsFqdn(char*name)
 // ExtractAndApplyDynList(PACK*p)
 // GetDynValueOrDefaultSafe(char*name,UINT64default_value)
+
+pub extern "C" fn GetCurrentTimezone() -> i32 {
+    return 0;
+}
