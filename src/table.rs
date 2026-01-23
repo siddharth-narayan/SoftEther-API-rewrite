@@ -1,9 +1,9 @@
-// GetTableNameStartWith(char* str)
-// GetTableStr(char* name)
-// GetTableUniStr(char* name)
-// GetUniErrorStr(UINT err)
-// GetTableInt(char* name)
-// GetCurrentLangId()
+// TOKEN_LIST *GetTableNameStartWith(char*str)
+// char *GetTableStr(char*name)
+// wchar_t *GetTableUniStr(char*name)
+// wchar_t *GetUniErrorStr(UINTerr)
+// UINT GetTableInt(char*name)
+// UINT GetCurrentLangId()
 
 use std::{cell::LazyCell, collections::HashMap, ffi::{CStr, CString, OsStr, c_char, c_schar, c_ushort}, fs::{File, read_to_string}, os::windows::ffi::OsStrExt, ptr::{null, null_mut}, sync::LazyLock};
 

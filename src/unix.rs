@@ -1,11 +1,11 @@
-// GetUnixio4Stdout()
-// UnixSetHighOomScore()
-// UnixExec(char* cmd)
-// UnixDisableInterfaceOffload(char* name)
-// UnixSetEnableKernelEspProcessing(bool b)
-// UnixDisableCoreDump()
-// UnixCloseIO()
-// UnixIsInVm()
+// void *GetUnixio4Stdout()
+// void UnixSetHighOomScore()
+// TOKEN_LIST *UnixExec(char*cmd)
+// void UnixDisableInterfaceOffload(char*name)
+// void UnixSetEnableKernelEspProcessing(boolb)
+// void UnixDisableCoreDump()
+// void UnixCloseIO()
+// bool UnixIsInVm()
 
 use std::{ffi::{CStr, c_char}, fs::File, io::Write, process};
 

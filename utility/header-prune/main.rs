@@ -78,7 +78,7 @@ pub fn process_ext_decl_to_func(
 
     let name = function_declaration.directDeclarator()?.get_text();
 
-    let full_text = format!("{} {} {}", return_type.unwrap_or(String::new()), pointer, function_declaration.get_text());
+    let full_text = format!("{} {}{}", return_type.unwrap_or(String::new()), pointer, function_declaration.get_text());
     Some((name, full_text))
 }
 
