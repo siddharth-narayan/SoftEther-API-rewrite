@@ -12,7 +12,7 @@ mod unix;
 mod win32;
 
 mod util;
-
+mod tests;
 
 fn main() {
     println!("Hello, world!");

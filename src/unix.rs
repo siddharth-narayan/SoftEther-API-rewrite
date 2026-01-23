@@ -29,7 +29,7 @@ pub extern "C" fn UnixSetHighOomScore() {
     let path = format!("/proc/{}/oom_score_adj", process::id());
     
     if let Ok(mut file) = File::create(path) {
-        file.write(format!("{}", 800).as_bytes());
+        file.write("800".as_bytes());
     }
 }
 
