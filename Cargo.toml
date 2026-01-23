@@ -6,10 +6,10 @@ edition = "2024"
 [lib]
 crate-type = ["staticlib", "cdylib"]
 
-# [[bin]]
-# name = "header-prune"
-# path = "utility/main.rs"
+[[bin]]
+name = "header-prune"
+path = "utility/main.rs"
 
 [dependencies]
-antlr-rust = "0.3.0-beta"
+antlr4rust = "0.5.2"
 cbindgen = "0.29.2"
