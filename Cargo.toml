@@ -8,7 +8,7 @@ crate-type = ["staticlib", "cdylib"]
 
 [[bin]]
 name = "header-prune"
-path = "utility/main.rs"
+path = "utility/header-prune/main.rs"
 
 [dependencies]
 antlr4rust = "0.5.2"
