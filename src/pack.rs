@@ -1,3 +1,53 @@
+use std::net::{Ipv4Addr, Ipv6Addr};
+
+use crate::mem::structs::buf::{Buffer};
+
+static MAX_ELEMENT_NAME_LEN: usize = 64;
+
+struct PackElement
+{
+	name: [u8; MAX_ELEMENT_NAME_LEN],
+	num_value: usize,
+	_type: u32,
+	// VALUE **values;			
+	// bool JsonHint_IsArray;
+	// bool JsonHint_IsBool;
+	// bool JsonHint_IsDateTime;
+	// bool JsonHint_IsIP;
+	// char JsonHint_GroupName[u8; MAX_ELEMENT_NAME_LEN];
+}
+
+struct Pack {
+    _internal: Vec<PackElement>,
+}
+
+impl Pack {
+    pub fn new() -> Self {
+        Self { _internal: Vec::new() }
+    }
+
+    pub fn as_mut_ptr(self) -> *mut Self {
+       Box::into_raw(Box::new(self))
+    }
+
+    pub fn free_mut_ptr(ptr: *mut Self) {
+        unsafe { drop(Box::from_raw(ptr)) }
+    }
+
+    pub fn to_buf(self) -> Buffer {
+        let mut out = Buffer::new();
+
+        out.write_u32(self._internal.len() as u32);
+        
+        for element in self._internal.iter() {
+            element.
+        }
+
+        out
+    }
+}
+
+
 // PACK *NewPack()
 // ELEMENT *GetElement(PACK*p,char*name,UINTtype)
 // void FreePack(PACK*p)

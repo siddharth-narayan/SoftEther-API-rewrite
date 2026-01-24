@@ -4,6 +4,7 @@ mod mem;
 mod config;
 mod dns;
 mod kernel;
+mod macros;
 mod network;
 mod pack;
 mod str;

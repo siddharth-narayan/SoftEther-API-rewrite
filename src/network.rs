@@ -1,3 +1,9 @@
+#[repr(C)]
+pub struct IP {
+    address: [u8; 16],
+    ipv6_scope_id: u32,
+}
+
 // int GetCurrentTimezone()
 pub extern "C" fn GetCurrentTimezone() -> i32 {
     return 0;

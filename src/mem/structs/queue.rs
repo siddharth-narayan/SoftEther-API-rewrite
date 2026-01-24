@@ -29,8 +29,7 @@ impl<T> Queue<T> {
     }
 
     pub fn as_mut_ptr(self) -> *mut Queue<T> {
-        let boxed = Box::new(self);
-        Box::into_raw(boxed)
+        Box::into_raw(Box::new(self))
     }
 
     pub fn free_mut_ptr(ptr: *mut Queue<T>) {

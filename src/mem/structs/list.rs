@@ -46,8 +46,7 @@ impl<T> List<T> {
     }
 
     pub fn as_mut_ptr(self) -> *mut List<T> {
-        let boxed = Box::new(self);
-        Box::into_raw(boxed)
+        Box::into_raw(Box::new(self))
     }
 
     pub fn free_mut_ptr(ptr: *mut List<T>) {
