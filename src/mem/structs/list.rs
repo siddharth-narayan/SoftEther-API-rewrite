@@ -5,8 +5,18 @@ use crate::util::RawPtr;
 type CompareFunction<T> = Box<dyn for<'a, 'b> Fn(&'a T, &'b T) -> Ordering>;
 type FfiCompareFunction = extern "C" fn(*const c_void, *const c_void) -> i32;
 
+#[repr(C)]
 pub struct List<T> {
+    ref_count: *mut RefCounter,
+    num_items: u32,
+    num_reserved: u32,
+    items_ptr: *const *mut c_void,
+    lock: *mut Lock,
+    cmp: FfiCompareFunction,
+
+    // Rust internals
     sorted: bool,
+    __param: u64, // ?? What does this do
     items: Vec<T>,
     compare_function: CompareFunction<T>,
 }
@@ -14,6 +24,14 @@ pub struct List<T> {
 impl<T: Ord> List<T> {
     pub fn new() -> List<T> {
         List {
+            ref_count: null_mut(),
+            num_items: 0,
+            num_reserved: 0,
+            items_ptr: null_mut(),
+            lock: null_mut(),
+            cmp: null_mut(),
+            __param: 0,
+            
             sorted: true,
             items: Vec::new(),
             compare_function: Box::new(|item_1: &T, item_2: &T| item_1.cmp(item_2)),

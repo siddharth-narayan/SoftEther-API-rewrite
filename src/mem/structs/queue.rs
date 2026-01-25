@@ -13,17 +13,25 @@
 
 use std::{collections::VecDeque, ffi::c_void, ptr::null_mut, sync::Mutex};
 
-use crate::{mem::mem::{Clone, Copy}, util::RawPtr};
+use crate::{mem::mem::{Clone, Copy}, object::RefCounter, util::RawPtr};
 
 struct Queue<T> {
-    lock: Mutex<()>,
+    ref_count: RefCounter,
+    size: u32,
+    fifo: *mut Fifo,
+    lock: *mut Lock,
+
     _internal: VecDeque<T>,
 }
 
 impl<T> Queue<T> {
     pub fn new() -> Queue<T> {
         Queue {
-            lock: Mutex::new(()),
+            ref_count: null_mut(),
+            size: 0,
+            fifo: null_mut(),
+            lock: null_mut(),
+            
             _internal: VecDeque::new(),
         }
     }

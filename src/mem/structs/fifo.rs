@@ -1,15 +1,40 @@
 use std::collections::VecDeque;
+use std::os::raw::c_void;
+use std::ptr::null_mut;
 
-use crate::util::RawPtr;
 use crate::mem::structs::buf::Buffer;
+use crate::util::RawPtr;
 
 pub struct Fifo<T> {
-    _internal: VecDeque<T>
+    ref_count: *mut RefCounter,
+    lock: *mut Lock,
+    p: *mut c_void,
+    pos: u32,
+    size: u32,
+    memsize: u32,
+    total_read_size: u64,
+    total_write_size: u64,
+    fixed: bool,
+
+    // Rust internal
+    _internal: VecDeque<T>,
 }
 
 impl<T: Copy> Fifo<T> {
     pub fn new() -> Fifo<T> {
-        Fifo { _internal: VecDeque::new() }
+        Fifo {
+            ref_count: null_mut(),
+            lock: null_mut(),
+            p: null_mut(),
+            pos: 0,
+            size: 0,
+            memsize: 0,
+            total_read_size: 0,
+            total_write_size: 0,
+            fixed: false,
+
+            _internal: VecDeque::new(),
+        }
     }
 
     pub fn as_mut_ptr(self) -> *mut Fifo<T> {
@@ -25,8 +50,7 @@ impl<T: Copy> Fifo<T> {
     }
 
     pub fn read(&mut self, size: usize) -> Option<Vec<u8>> {
-
-        return None
+        return None;
     }
 
     pub fn read_all(&mut self) -> Buffer {
@@ -41,9 +65,7 @@ impl<T: Copy> Fifo<T> {
         while let Some(item) = iter.next() {
             self._internal.push_back(item.clone());
         }
-        
     }
-
 }
 
 #[unsafe(no_mangle)]
@@ -79,7 +101,7 @@ pub extern "C" fn WriteFifo(ptr: *mut Fifo<RawPtr>, content: RawPtr, size: usize
 #[unsafe(no_mangle)]
 pub extern "C" fn FifoSize(ptr: *mut Fifo<RawPtr>) -> usize {
     let fifo = unsafe { &mut *ptr };
-    
+
     fifo.size()
 }
 
@@ -119,4 +141,3 @@ pub extern "C" fn SetFifoCurrentReallocMemSize(size: usize) {
 // FIFO *NewFifoEx2(bool fast, bool fixed); // Not exported?
 // void InitFifo(); // Not exported?
 // void SetFifoCurrentReallocMemSize(UINT size);
-

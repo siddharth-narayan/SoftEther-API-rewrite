@@ -1,29 +1,49 @@
-use std::net::{Ipv4Addr, Ipv6Addr};
+use std::{net::{Ipv4Addr, Ipv6Addr}, ptr::null_mut};
 
 use crate::mem::structs::buf::{Buffer};
 
 static MAX_ELEMENT_NAME_LEN: usize = 64;
 
+enum PackElementType {
+
+}
+
+#[repr(C)]
 struct PackElement
 {
 	name: [u8; MAX_ELEMENT_NAME_LEN],
 	num_value: usize,
-	_type: u32,
-	// VALUE **values;			
-	// bool JsonHint_IsArray;
-	// bool JsonHint_IsBool;
-	// bool JsonHint_IsDateTime;
-	// bool JsonHint_IsIP;
-	// char JsonHint_GroupName[u8; MAX_ELEMENT_NAME_LEN];
+	__type: u32,
+    values_ptr: *const *mut Value,
+    json_is_array: bool,
+    json_isbool: bool,
+    json_is_datetime: bool,
+    json_is_ip: bool,
+    json_groupname: [u8; MAX_ELEMENT_NAME_LEN],
+
+    // Rust internals
+    _type: PackElementType,
+    values: Vec<PackInnerValue>
 }
 
+#[repr(C)]
 struct Pack {
+    elements: *mut List,
+    json_subitem_names: *mut List,
+    json_groupname: [u8; MAX_ELEMENT_NAME_LEN],
+
     _internal: Vec<PackElement>,
 }
 
 impl Pack {
     pub fn new() -> Self {
-        Self { _internal: Vec::new() }
+        Self { 
+            elements: null_mut(),
+            json_subitem_names: null_mut(),
+            json_groupname: [0; MAX_ELEMENT_NAME_LEN],
+
+            _internal: Vec::new() 
+        }
     }
 
     pub fn as_mut_ptr(self) -> *mut Self {

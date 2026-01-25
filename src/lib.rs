@@ -6,6 +6,7 @@ mod dns;
 mod kernel;
 mod macros;
 mod network;
+mod object;
 mod pack;
 mod str;
 mod table;
