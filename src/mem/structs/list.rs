@@ -1,6 +1,6 @@
-use std::{cmp::Ordering, ffi::c_void, ptr::null_mut};
+use std::{cmp::Ordering, ffi::c_void, ptr::null_mut, vec::IntoIter};
 
-use crate::util::RawPtr;
+use crate::{object::{Lock, RefCounter}, util::RawPtr};
 
 type CompareFunction<T> = Box<dyn for<'a, 'b> Fn(&'a T, &'b T) -> Ordering>;
 type FfiCompareFunction = extern "C" fn(*const c_void, *const c_void) -> i32;
@@ -57,6 +57,14 @@ impl<T> List<T> {
         });
 
         List {
+            ref_count: null_mut(),
+            num_items: 0,
+            num_reserved: 0,
+            items_ptr: null_mut(),
+            lock: null_mut(),
+            cmp: compare,
+            __param: 0,
+
             sorted: true,
             items: Vec::new(),
             compare_function: rustified_compare_func,
@@ -69,6 +77,10 @@ impl<T> List<T> {
 
     pub fn free_mut_ptr(ptr: *mut List<T>) {
         unsafe { drop(Box::from_raw(ptr)) }
+    }
+
+    pub fn into_iter(self) -> IntoIter<T> {
+        self.items.into_iter()
     }
 
     pub fn add(&mut self, item: T) {

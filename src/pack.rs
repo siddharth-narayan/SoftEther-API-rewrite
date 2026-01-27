@@ -1,12 +1,26 @@
-use std::{net::{Ipv4Addr, Ipv6Addr}, ptr::null_mut};
+use std::{net::{Ipv4Addr, Ipv6Addr}, os::raw::c_void, ptr::null_mut};
 
 use crate::mem::structs::buf::{Buffer};
+use crate::mem::structs::list::{List};
 
 static MAX_ELEMENT_NAME_LEN: usize = 64;
+
+// VALUE object
+struct PackInnerValue
+{
+	size: u32,
+	int_val: u32,
+	data: *mut c_void,
+	str: *const u8,
+	uni_str: *const u16,
+	u64_val: u64,
+}
+
 
 enum PackElementType {
 
 }
+
 
 #[repr(C)]
 struct PackElement
@@ -14,7 +28,7 @@ struct PackElement
 	name: [u8; MAX_ELEMENT_NAME_LEN],
 	num_value: usize,
 	__type: u32,
-    values_ptr: *const *mut Value,
+    values_ptr: *const *mut PackInnerValue,
     json_is_array: bool,
     json_isbool: bool,
     json_is_datetime: bool,
@@ -26,13 +40,50 @@ struct PackElement
     values: Vec<PackInnerValue>
 }
 
+impl PartialEq for PackElement {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other).is_eq()
+    }
+}
+
+impl Eq for PackElement {
+    
+}
+
+impl PartialOrd for PackElement {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for PackElement {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        for i in 0..MAX_ELEMENT_NAME_LEN {
+            if self.name[i] > other.name[i] {
+                return std::cmp::Ordering::Greater;
+            }
+            if self.name[i] > other.name[i] {
+                return std::cmp::Ordering::Greater;
+            }
+        }
+
+        std::cmp::Ordering::Equal
+    }
+}
+
+impl PackElement {
+    fn into_bytes(self) {
+        
+    }
+}
+
 #[repr(C)]
 struct Pack {
-    elements: *mut List,
-    json_subitem_names: *mut List,
+    elements: *const List<PackElement>,
+    json_subitem_names: *mut List<String>, // String or something else?
     json_groupname: [u8; MAX_ELEMENT_NAME_LEN],
 
-    _internal: Vec<PackElement>,
+    _internal: List<PackElement>,
 }
 
 impl Pack {
@@ -42,7 +93,7 @@ impl Pack {
             json_subitem_names: null_mut(),
             json_groupname: [0; MAX_ELEMENT_NAME_LEN],
 
-            _internal: Vec::new() 
+            _internal: List::new() 
         }
     }
 
@@ -59,8 +110,8 @@ impl Pack {
 
         out.write_u32(self._internal.len() as u32);
         
-        for element in self._internal.iter() {
-            element.
+        for element in self._internal.into_iter() {
+            element.into_bytes()
         }
 
         out

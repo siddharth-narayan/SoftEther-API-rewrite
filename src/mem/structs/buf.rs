@@ -62,162 +62,157 @@ impl CCompat for Buffer {
     }
 }
 
-c_compat! {
-    impl Buffer {
-        pub fn new() -> Self {
-            let mut out = Buffer {
-                buf_ptr: null_mut(),
-                size: 0,
-                size_reserved: 0,
-                current: 0,
+impl Buffer {
+    pub fn new() -> Self {
+        let mut out = Buffer {
+            buf_ptr: null_mut(),
+            size: 0,
+            size_reserved: 0,
+            current: 0,
 
-                buf: Vec::new(),
-                pos: 0,
-            };
+            buf: Vec::new(),
+            pos: 0,
+        };
 
-            out
-        }
+        out
+    }
 
-        pub fn new_from_vec(vec: Vec<u8>) -> Self {
-            let mut buf = Self::new();
-            buf.buf = vec;
-            buf
-        }
+    pub fn new_from_vec(vec: Vec<u8>) -> Self {
+        let mut buf = Self::new();
+        buf.buf = vec;
+        buf
+    }
 
-        pub fn as_mut_ptr(self) -> *mut Self {
-            Box::into_raw(Box::new(self))
-        }
+    pub fn as_mut_ptr(self) -> *mut Self {
+        Box::into_raw(Box::new(self))
+    }
 
-        pub fn free_mut_ptr(ptr: *mut Self) {
-            unsafe { drop(Box::from_raw(ptr)) }
-        }
+    pub fn free_mut_ptr(ptr: *mut Self) {
+        unsafe { drop(Box::from_raw(ptr)) }
+    }
 
-        pub fn seek(&mut self, position: usize) {
-            self.pos = position;
-        }
+    pub fn seek(&mut self, position: usize) {
+        self.pos = position;
+    }
 
-        pub fn seek_offset(&mut self, offset: isize) {
-            self.pos = self.pos.saturating_add_signed(offset)
-        }
+    pub fn seek_offset(&mut self, offset: isize) {
+        self.pos = self.pos.saturating_add_signed(offset)
+    }
 
-        pub fn clear(&mut self) {
-            self.buf.clear();
-        }
+    pub fn clear(&mut self) {
+        self.buf.clear();
     }
 }
 
-c_compat! {
-    impl Buffer {
-        pub fn read(&mut self, mut size: usize) -> &mut [u8] {
-            if (self.buf.len() - 1) - self.pos < size {
-                return &mut self.buf[self.pos..];
-            }
-
-            &mut self.buf[self.pos..self.pos + size]
+impl Buffer {
+    pub fn read(&mut self, mut size: usize) -> &mut [u8] {
+        if (self.buf.len() - 1) - self.pos < size {
+            return &mut self.buf[self.pos..];
         }
 
-        // Reads a full buffer into another buff
-        pub fn read_buf(&mut self, buffer: &mut Buffer, size: usize) {
-            let data = self.read(size);
+        &mut self.buf[self.pos..self.pos + size]
+    }
 
-            buffer.write(data);
+    // Reads a full buffer into another buff
+    pub fn read_buf(&mut self, buffer: &mut Buffer, size: usize) {
+        let data = self.read(size);
+
+        buffer.write(data);
+    }
+
+    pub fn read_buf_offset(&mut self, buffer: &Buffer) {
+        // if let Some(data) = self.read(size) {
+        //     buffer.write(data);
+        // }
+    }
+
+    pub fn read_u8(&mut self) -> u8 {
+        let slice = self.read(1).try_into().unwrap_or_default();
+
+        u8::from_be_bytes(slice)
+    }
+
+    pub fn read_u16(&mut self) -> u16 {
+        let slice = self.read(2).try_into().unwrap_or_default();
+
+        u16::from_be_bytes(slice)
+    }
+
+    pub fn read_u32(&mut self) -> u32 {
+        let slice = self.read(4).try_into().unwrap_or_default();
+
+        u32::from_be_bytes(slice)
+    }
+
+    pub fn read_u64(&mut self) -> u64 {
+        let slice = self.read(8).try_into().unwrap_or_default();
+
+        u64::from_be_bytes(slice)
+    }
+
+    pub fn read_str(&mut self, str: &mut str) -> Option<&str> {
+        let string_length = self.read_u32();
+
+        let string_bytes = self.read(string_length.try_into().unwrap());
+        if let Ok(string) = str::from_utf8(string_bytes) {
+            return Some(string);
         }
 
-        pub fn read_buf_offset(&mut self, buffer: &Buffer) {
-            // if let Some(data) = self.read(size) {
-            //     buffer.write(data);
-            // }
-        }
-
-        pub fn read_u8(&mut self) -> u8 {
-            let slice = self.read(1).try_into().unwrap_or_default();
-
-            u8::from_be_bytes(slice)
-        }
-
-        pub fn read_u16(&mut self) -> u16 {
-            let slice = self.read(2).try_into().unwrap_or_default();
-
-            u16::from_be_bytes(slice)
-        }
-
-        pub fn read_u32(&mut self) -> u32 {
-            let slice = self.read(4).try_into().unwrap_or_default();
-
-            u32::from_be_bytes(slice)
-        }
-
-        pub fn read_u64(&mut self) -> u64 {
-            let slice = self.read(8).try_into().unwrap_or_default();
-
-            u64::from_be_bytes(slice)
-        }
-
-        pub fn read_str(&mut self, str: &mut str) -> Option<&str> {
-            let string_length = self.read_u32();
-
-            let string_bytes = self.read(string_length.try_into().unwrap());
-            if let Ok(string) = str::from_utf8(string_bytes) {
-                return Some(string);
-            }
-
-            return None;
-        }
+        return None;
     }
 }
 
-c_compat! {
-    // Write methods
-    // void WriteBuf(BUF *b, void *buf, UINT size);
-    // void WriteBufBuf(BUF *b, BUF *bb);
-    // void WriteBufBufWithOffset(BUF *b, BUF *bb);
-    // bool WriteBufInt(BUF *b, UINT value);
-    // bool WriteBufInt64(BUF *b, UINT64 value);
-    // bool WriteBufChar(BUF *b, UCHAR uc);
-    // bool WriteBufShort(BUF *b, USHORT value);
-    // bool WriteBufStr(BUF *b, char *str);
-    // void WriteBufLine(BUF *b, char *str);
-    impl Buffer {
-        pub fn write(&mut self, data: &[u8]) {
-            self.buf.write_all(data);
-        }
+// Write methods
+// void WriteBuf(BUF *b, void *buf, UINT size);
+// void WriteBufBuf(BUF *b, BUF *bb);
+// void WriteBufBufWithOffset(BUF *b, BUF *bb);
+// bool WriteBufInt(BUF *b, UINT value);
+// bool WriteBufInt64(BUF *b, UINT64 value);
+// bool WriteBufChar(BUF *b, UCHAR uc);
+// bool WriteBufShort(BUF *b, USHORT value);
+// bool WriteBufStr(BUF *b, char *str);
+// void WriteBufLine(BUF *b, char *str);
+impl Buffer {
+    pub fn write(&mut self, data: &[u8]) {
+        self.buf.write_all(data);
+    }
 
-        pub fn write_buf(&mut self, buffer: &Buffer) {
-            self.write(buffer.clone().buf.as_slice());
-        }
+    pub fn write_buf(&mut self, buffer: &Buffer) {
+        self.write(buffer.clone().buf.as_slice());
+    }
 
-        pub fn write_buf_offset(&mut self, buffer: &Buffer) {
-            self.write(&(buffer.clone().buf[buffer.pos..]));
-        }
+    pub fn write_buf_offset(&mut self, buffer: &Buffer) {
+        self.write(&(buffer.clone().buf[buffer.pos..]));
+    }
 
-        pub fn write_u8(&mut self, byte: u8) {
-            self.write([byte; 1].as_slice());
-        }
+    pub fn write_u8(&mut self, byte: u8) {
+        self.write([byte; 1].as_slice());
+    }
 
-        pub fn write_u16(&mut self, int: u16) {
-            self.write(int.to_be_bytes().as_slice());
-        }
+    pub fn write_u16(&mut self, int: u16) {
+        self.write(int.to_be_bytes().as_slice());
+    }
 
-        pub fn write_u32(&mut self, int: u32) {
-            self.write(int.to_be_bytes().as_slice());
-        }
+    pub fn write_u32(&mut self, int: u32) {
+        self.write(int.to_be_bytes().as_slice());
+    }
 
-        pub fn write_u64(&mut self, int: u64) {
-            self.write(int.to_be_bytes().as_slice());
-        }
+    pub fn write_u64(&mut self, int: u64) {
+        self.write(int.to_be_bytes().as_slice());
+    }
 
-        pub fn write_str(&mut self, str: String) {
-            self.write(str.as_bytes());
-        }
+    pub fn write_str(&mut self, str: String) {
+        self.write(str.as_bytes());
+    }
 
-        pub fn write_line(&mut self, mut str: String) {
-            str.insert_str(str.len(), "\r\n");
+    pub fn write_line(&mut self, mut str: String) {
+        str.insert_str(str.len(), "\r\n");
 
-            self.write_u32(str.len() as u32);
-            self.write(str.as_bytes());
-        }
+        self.write_u32(str.len() as u32);
+        self.write(str.as_bytes());
     }
 }
+
 // ==================================================
 // ==================== C API =======================
 // ==================================================

@@ -13,14 +13,22 @@
 
 use std::{collections::VecDeque, ffi::c_void, ptr::null_mut, sync::Mutex};
 
-use crate::{mem::mem::{Clone, Copy}, object::RefCounter, util::RawPtr};
+use crate::{
+    mem::{
+        mem::{Clone, Copy},
+        structs::fifo::Fifo,
+    },
+    object::{Lock, RefCounter},
+    util::RawPtr,
+};
 
 struct Queue<T> {
-    ref_count: RefCounter,
+    ref_count: *mut RefCounter,
     size: u32,
-    fifo: *mut Fifo,
+    fifo: *mut Fifo<T>,
     lock: *mut Lock,
 
+    _lock: Lock,
     _internal: VecDeque<T>,
 }
 
@@ -31,8 +39,9 @@ impl<T> Queue<T> {
             size: 0,
             fifo: null_mut(),
             lock: null_mut(),
-            
+
             _internal: VecDeque::new(),
+            _lock: Lock::new()
         }
     }
 
@@ -65,7 +74,7 @@ impl<T> Queue<T> {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn GetNext(ptr: *mut Queue<RawPtr>) -> RawPtr {
-    let queue = unsafe {&mut *ptr};
+    let queue = unsafe { &mut *ptr };
 
     if let Some(next) = queue.next() {
         next
@@ -81,7 +90,7 @@ pub extern "C" fn GetNextWithLock(ptr: *mut Queue<RawPtr>) -> RawPtr {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn InsertQueue(ptr: *mut Queue<RawPtr>, p: RawPtr) {
-    let queue = unsafe {&mut *ptr};
+    let queue = unsafe { &mut *ptr };
 
     queue.push(p);
 }
@@ -95,10 +104,9 @@ pub extern "C" fn InsertQueueWithLock(ptr: *mut Queue<RawPtr>, p: RawPtr) {
 pub extern "C" fn InsertQueueInt(ptr: *mut Queue<RawPtr>, value: u32) {
     let value_ptr: *const u32 = &value;
     let value_ptr = value_ptr as *const u8;
-    
+
     let new_value = Clone(value_ptr, 4);
     let new_value = new_value as RawPtr;
-
 
     InsertQueue(ptr, new_value);
 }
@@ -131,7 +139,7 @@ pub extern "C" fn NewQueueFast() -> *mut Queue<RawPtr> {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn GetQueueNum(ptr: *mut Queue<RawPtr>) -> usize {
-    let queue = unsafe {&mut *ptr};
+    let queue = unsafe { &mut *ptr };
 
     queue.len()
 }

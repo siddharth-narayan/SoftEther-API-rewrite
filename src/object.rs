@@ -1,5 +1,5 @@
 // Lock object
-struct LOCK
+pub struct Lock
 {
 // 	void *pData;
 // 	bool Ready;
@@ -12,7 +12,17 @@ struct LOCK
 // 	UINT Line;
 // 	UINT ThreadId;
 // #endif	// _DEBUG
-};
+}
+
+impl Lock {
+	pub fn new() -> Self {
+		Lock {  }
+	}
+	
+	pub fn lock(&mut self) {
+
+	}
+}
 
 // Counter object
 pub struct Counter {
