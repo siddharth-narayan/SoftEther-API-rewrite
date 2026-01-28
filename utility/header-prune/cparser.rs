@@ -2320,7 +2320,7 @@ where
 			recog.base.set_state(311);
 			recog.err_handler.sync(&mut recog.base)?;
 			_la = recog.base.input.la(1);
-			while ((((_la - 80)) & !0x3f) == 0 && ((1usize << (_la - 80)) & 7) != 0) {
+			while (((_la - 80)) & !0x3f) == 0 && ((1usize << (_la - 80)) & 7) != 0{
 				{
 				{
 				recog.base.set_state(307);
@@ -2758,7 +2758,7 @@ where
 			recog.base.set_state(335);
 			recog.err_handler.sync(&mut recog.base)?;
 			_la = recog.base.input.la(1);
-			while ((((_la - 70)) & !0x3f) == 0 && ((1usize << (_la - 70)) & 15) != 0) {
+			while (((_la - 70)) & !0x3f) == 0 && ((1usize << (_la - 70)) & 15) != 0 {
 				{
 				{
 				recog.base.set_state(331);
@@ -9294,7 +9294,7 @@ where
 					recog.base.set_state(741);
 					recog.err_handler.sync(&mut recog.base)?;
 					_la = recog.base.input.la(1);
-					if ((((_la - 64)) & !0x3f) == 0 && ((1usize << (_la - 64)) & 8454149) != 0) {
+					if (((_la - 64)) & !0x3f) == 0 && ((1usize << (_la - 64)) & 8454149) != 0 {
 						{
 						/*InvokeRule abstractDeclarator*/
 						recog.base.set_state(740);
@@ -9529,7 +9529,7 @@ where
 			recog.base.set_state(755);
 			recog.err_handler.sync(&mut recog.base)?;
 			_la = recog.base.input.la(1);
-			if ((((_la - 64)) & !0x3f) == 0 && ((1usize << (_la - 64)) & 8454149) != 0) {
+			if (((_la - 64)) & !0x3f) == 0 && ((1usize << (_la - 64)) & 8454149) != 0 {
 				{
 				/*InvokeRule abstractDeclarator*/
 				recog.base.set_state(754);
