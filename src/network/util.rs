@@ -1,7 +1,38 @@
+use std::net::{IpAddr, Ipv4Addr};
+
+// IP is likely a struct read and written on the stack
+// So it looks like we can't add a rust-native section
+// We must keep it the same length as in the C implementation
+#[derive(Default)]
 #[repr(C)]
 pub struct IP {
     address: [u8; 16],
     ipv6_scope_id: u32,
+
+    // ip: IpAddr
+}
+
+impl IP {
+    fn from_ip(addr: IpAddr) -> IP {
+        match addr {
+            IpAddr::V4(v4) => {
+                let mut addr = [0u8; 16];
+                addr[0..4].copy_from_slice(&u32::to_be_bytes(v4.to_bits()));
+
+                IP { address: addr, ipv6_scope_id: 0 }
+            },
+            IpAddr::V6(v6) => {
+                IP { address: u128::to_be_bytes(v6.to_bits()), ipv6_scope_id: 0 }
+            }
+        }
+    }
+
+    // TODO: Do we need Ipv6 here?
+    fn to_ip(&self) -> Ipv4Addr {
+        let slice = self.address[0..4].try_into().unwrap_or_default();
+
+        Ipv4Addr::from_bits(u32::from_be_bytes(slice))
+    }
 }
 
 // int GetCurrentTimezone()
@@ -11,10 +42,7 @@ pub extern "C" fn GetCurrentTimezone() -> i32 {
 
 // void SetDhParam(DH_CTX*dh)
 // bool IsUseAlternativeHostname()
-// bool SendPack(SOCK*s,PACK*p)
-// PACK *RecvPack(SOCK*s)
-// PACK *RecvPackWithHash(SOCK*s)
-// bool SendPackWithHash(SOCK*s,PACK*p)
+
 // UINT GetErrorFromPack(PACK*p)
 // PACK *PackError(UINTerror)
 // UINT DetectFletsType()
@@ -46,33 +74,18 @@ pub extern "C" fn GetCurrentTimezone() -> i32 {
 // void GetMachineHostName(char*name,UINTsize)
 // void UINTToIP(IP*ip,UINTvalue)
 // UINT IPToUINT(IP*ip)
-// void ReleaseSock(SOCK*s)
-// SOCK *Connect(char*hostname,UINTport)
-// SOCK *ConnectEx(char*hostname,UINTport,UINTtimeout)
-// SOCK *ConnectEx2(char*hostname,UINTport,UINTtimeout,bool*cancel_flag)
-// SOCK *ConnectEx3(char*hostname,UINTport,UINTtimeout,bool*cancel_flag,char*nat_t_svc_name,UINT*nat_t_error_code,booltry_start_ssl,boolno_get_hostname)
-// SOCK *ConnectEx4(char*hostname,UINTport,UINTtimeout,bool*cancel_flag,char*nat_t_svc_name,UINT*nat_t_error_code,booltry_start_ssl,boolno_get_hostname,IP*ret_ip)
-// SOCK *BindConnectEx5(IP*localIP,UINTlocalport,char*hostname,UINTport,UINTtimeout,bool*cancel_flag,char*nat_t_svc_name,UINT*nat_t_error_code,booltry_start_ssl,boolno_get_hostname,SSL_VERIFY_OPTION*ssl_option,UINT*ssl_err,char*hint_str,IP*ret_ip)
+
+
+
 // bool SetTtl(SOCK*sock,UINTttl)
-// void Disconnect(SOCK*sock)
-// SOCK *Listen(UINTport)
-// SOCK *ListenEx(UINTport,boollocal_only)
-// SOCK *ListenEx2(UINTport,boollocal_only,boolenable_ca,IP*listen_ip)
-// SOCK *ListenEx6(UINTport,boollocal_only)
-// SOCK *ListenEx63(UINTport,boollocal_only,boolenable_ca,IP*listen_ip)
-// SOCK *Accept(SOCK*sock)
-// UINT Send(SOCK*sock,void*data,UINTsize,boolsecure)
-// UINT Recv(SOCK*sock,void*data,UINTsize,boolsecure)
-// UINT Peek(SOCK*sock,void*data,UINTsize)
+
+
+
+
+
 // void SetNoNeedToRead(SOCK*sock)
-// bool StartSSL(SOCK*sock,X*x,K*priv)
-// bool StartSSLEx(SOCK*sock,X*x,K*priv,UINTssl_timeout,char*sni_hostname)
-// bool StartSSLEx3(SOCK*sock,X*x,K*priv,LIST*chain,UINTssl_timeout,char*sni_hostname,SSL_VERIFY_OPTION*ssl_option,UINT*ssl_err)
-// bool SendAll(SOCK*sock,void*data,UINTsize,boolsecure)
-// void SendAdd(SOCK*sock,void*data,UINTsize)
-// bool SendNow(SOCK*sock,intsecure)
-// bool RecvAll(SOCK*sock,void*data,UINTsize,boolsecure)
-// bool RecvAllWithDiscard(SOCK*sock,UINTsize,boolsecure)
+
+
 // void InitSockSet(SOCKSET*set)
 // void AddSockSet(SOCKSET*set,SOCK*sock)
 // CANCEL *NewCancel()
@@ -80,15 +93,10 @@ pub extern "C" fn GetCurrentTimezone() -> i32 {
 // void Cancel(CANCEL*c)
 // void Select(SOCKSET*set,UINTtimeout,CANCEL*c1,CANCEL*c2)
 // void SetWantToUseCipher(SOCK*sock,char*name)
-// SOCK *NewUDP(UINTport)
-// SOCK *NewUDPEx(UINTport,boolipv6)
-// SOCK *NewUDPEx2(UINTport,boolipv6,IP*ip)
-// SOCK *NewUDPEx3(UINTport,IP*ip)
-// SOCK *NewUDP4(UINTport,IP*ip)
 // void ClearSockDfBit(SOCK*s)
 // void SetRawSockHeaderIncludeOption(SOCK*s,boolenable)
-// UINT SendTo(SOCK*sock,IP*dest_addr,UINTdest_port,void*data,UINTsize)
-// UINT RecvFrom(SOCK*sock,IP*src_addr,UINT*src_port,void*data,UINTsize)
+
+
 // void SetTimeout(SOCK*sock,UINTtimeout)
 // bool CheckTCPPort(char*hostname,UINTport)
 // void JoinSockToSockEvent(SOCK*sock,SOCK_EVENT*event)
@@ -100,8 +108,7 @@ pub extern "C" fn GetCurrentTimezone() -> i32 {
 // UINT SetIP32(UCHARa1,UCHARa2,UCHARa3,UCHARa4)
 // bool GetDefaultDns(IP*ip)
 // bool GetDomainName(char*name,UINTsize)
-// void AcceptInit(SOCK*s)
-// void AcceptInitEx(SOCK*s,boolno_lookup_hostname)
+
 // void DisableGetHostNameWhenAcceptInit()
 // TOKEN_LIST *GetCipherList()
 // COUNTER *GetNumTcpConnectionsCounter()
@@ -184,18 +191,8 @@ pub extern "C" fn GetCurrentTimezone() -> i32 {
 // LIST *GetHostIPAddressList()
 // void FreeHostIPAddressList(LIST*o)
 // UINT64 GetHostIPAddressListHash()
-// UDPLISTENER *NewUdpListener(UDPLISTENER_RECV_PROC*recv_proc,void*param,IP*listen_ip)
-// void StopUdpListener(UDPLISTENER*u)
-// void FreeUdpListener(UDPLISTENER*u)
-// void AddPortToUdpListener(UDPLISTENER*u,UINTport)
-// void DeletePortFromUdpListener(UDPLISTENER*u,UINTport)
-// void DeleteAllPortFromUdpListener(UDPLISTENER*u)
-// void UdpListenerSendPackets(UDPLISTENER*u,LIST*packet_list)
 // TCP_RAW_DATA *NewTcpRawData(IP*src_ip,UINTsrc_port,IP*dst_ip,UINTdst_port)
 // void FreeTcpRawData(TCP_RAW_DATA*trd)
-// UDPPACKET *NewUdpPacket(IP*src_ip,UINTsrc_port,IP*dst_ip,UINTdst_port,void*data,UINTsize)
-// void FreeUdpPacket(UDPPACKET*p)
-// bool IsUdpPortOpened(UDPLISTENER*u,IP*server_ip,UINTport)
 // INTERRUPT_MANAGER *NewInterruptManager()
 // void FreeInterruptManager(INTERRUPT_MANAGER*m)
 // void AddInterrupt(INTERRUPT_MANAGER*m,UINT64tick)
@@ -220,7 +217,10 @@ pub extern "C" fn GetCurrentTimezone() -> i32 {
 // bool IsIPMyHost(IP*ip)
 // bool IsMacAddressLocalFast(void*addr)
 // void RefreshLocalMacAddressList()
-// UINT GetOSSecurityLevel()
+pub extern "C" fn GetOSSecurityLevel() -> u32 {
+    return 0;
+}
+
 // void SetCurrentDDnsFqdn(char*name)
 // void ExtractAndApplyDynList(PACK*p)
 // UINT64 GetDynValueOrDefaultSafe(char*name,UINT64default_value)

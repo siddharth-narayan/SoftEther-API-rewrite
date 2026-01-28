@@ -1,9 +1,12 @@
 use std::{cmp::Ordering, ffi::c_void, ptr::null_mut, vec::IntoIter};
 
-use crate::{object::{Lock, RefCounter}, util::RawPtr};
+use crate::{
+    object::{Lock, RefCounter},
+    util::RawPtr,
+};
 
 type CompareFunction<T> = Box<dyn for<'a, 'b> Fn(&'a T, &'b T) -> Ordering>;
-type FfiCompareFunction = extern "C" fn(*const c_void, *const c_void) -> i32;
+pub type FfiCompareFunction = extern "C" fn(*const c_void, *const c_void) -> i32;
 
 #[repr(C)]
 pub struct List<T> {
@@ -12,7 +15,7 @@ pub struct List<T> {
     num_reserved: u32,
     items_ptr: *const *mut c_void,
     lock: *mut Lock,
-    cmp: FfiCompareFunction,
+    cmp: Option<FfiCompareFunction>, // None functions as NULL
 
     // Rust internals
     sorted: bool,
@@ -29,9 +32,9 @@ impl<T: Ord> List<T> {
             num_reserved: 0,
             items_ptr: null_mut(),
             lock: null_mut(),
-            cmp: null_mut(),
+            cmp: None,
             __param: 0,
-            
+
             sorted: true,
             items: Vec::new(),
             compare_function: Box::new(|item_1: &T, item_2: &T| item_1.cmp(item_2)),
@@ -62,7 +65,7 @@ impl<T> List<T> {
             num_reserved: 0,
             items_ptr: null_mut(),
             lock: null_mut(),
-            cmp: compare,
+            cmp: unsafe { std::mem::transmute(compare) },
             __param: 0,
 
             sorted: true,
@@ -77,6 +80,10 @@ impl<T> List<T> {
 
     pub fn free_mut_ptr(ptr: *mut List<T>) {
         unsafe { drop(Box::from_raw(ptr)) }
+    }
+
+    pub fn len(&self) -> usize {
+        return self.items.len();
     }
 
     pub fn into_iter(self) -> IntoIter<T> {
@@ -194,7 +201,7 @@ pub extern "C" fn Search(ptr: *mut List<RawPtr>, target: RawPtr) -> RawPtr {
         return list.get(idx).unwrap_or(&null_mut()).clone();
     }
 
-    return null_mut()
+    return null_mut();
 }
 
 #[unsafe(no_mangle)]

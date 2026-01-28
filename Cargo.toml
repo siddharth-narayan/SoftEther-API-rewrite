@@ -13,3 +13,5 @@ path = "utility/header-prune/main.rs"
 [dependencies]
 antlr4rust = "0.5.2"
 cbindgen = "0.29.2"
+openssl = "0.10.75"
+tokio = "1.49.0"

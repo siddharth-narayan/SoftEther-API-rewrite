@@ -1,0 +1,11 @@
+// UDPLISTENER *NewUdpListener(UDPLISTENER_RECV_PROC*recv_proc,void*param,IP*listen_ip)
+// void StopUdpListener(UDPLISTENER*u)
+// void FreeUdpListener(UDPLISTENER*u)
+// void AddPortToUdpListener(UDPLISTENER*u,UINTport)
+// void DeletePortFromUdpListener(UDPLISTENER*u,UINTport)
+// void DeleteAllPortFromUdpListener(UDPLISTENER*u)
+// void UdpListenerSendPackets(UDPLISTENER*u,LIST*packet_list)
+
+// UDPPACKET *NewUdpPacket(IP*src_ip,UINTsrc_port,IP*dst_ip,UINTdst_port,void*data,UINTsize)
+// void FreeUdpPacket(UDPPACKET*p)
+// bool IsUdpPortOpened(UDPLISTENER*u,IP*server_ip,UINTport)

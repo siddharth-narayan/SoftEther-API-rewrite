@@ -6,7 +6,7 @@
 
 use std::{ffi::CStr, net::ToSocketAddrs};
 
-use crate::network::IP;
+use crate::network::util::IP;
 
 pub extern "C" fn DnsThreadNum() -> u32 {
     return 1;

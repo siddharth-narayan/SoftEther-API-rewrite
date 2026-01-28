@@ -1,3 +1,4 @@
+#![feature(default_field_values)]
 #![allow(unused)]
 mod mem;
 

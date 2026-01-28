@@ -22,7 +22,7 @@ use crate::{
     util::RawPtr,
 };
 
-struct Queue<T> {
+pub struct Queue<T> {
     ref_count: *mut RefCounter,
     size: u32,
     fifo: *mut Fifo<T>,
@@ -58,15 +58,15 @@ impl<T> Queue<T> {
     }
 
     pub fn next(&mut self) -> Option<T> {
-        let guard = self.lock.lock();
+        let guard = self._lock.lock();
 
-        let mut queue = guard.unwrap();
+        // let mut queue = guard.unwrap();
 
         self._internal.pop_front()
     }
 
     pub fn push(&mut self, item: T) {
-        let guard = self.lock.lock();
+        // let guard = self.lock.lock();
 
         self._internal.push_back(item);
     }

@@ -5,7 +5,7 @@
 // UINT GetTableInt(char*name)
 // UINT GetCurrentLangId()
 
-use std::{cell::LazyCell, collections::HashMap, ffi::{CStr, CString, OsStr, c_char, c_schar, c_ushort}, fs::{File, read_to_string}, os::windows::ffi::OsStrExt, ptr::{null, null_mut}, sync::LazyLock};
+use std::{cell::LazyCell, collections::HashMap, ffi::{CStr, CString, OsStr, c_char, c_schar, c_ushort}, fs::{File, read_to_string}, ptr::{null, null_mut}, sync::LazyLock};
 
 pub static TABLE: LazyLock<Table> = LazyLock::new(load_table);
 
@@ -86,7 +86,7 @@ pub extern "C" fn GetTableUniStr(name: *const c_char) -> *const c_ushort {
     if let Some(value) = TABLE.get(name) {
         let new = value.clone();
         let str = new.as_str();
-        let vec: Vec<u16> = OsStr::new(str).encode_wide().chain(Some(0).into_iter()).collect();
+        let vec: Vec<u16> = str.encode_utf16().chain(Some(0)).collect();
         vec.as_ptr()
     } else {
         null()
@@ -98,7 +98,7 @@ pub extern "C" fn GetUniErrorStr(err: u32) -> *const c_ushort {
     if let Some(value) = TABLE.get(&lookup) {
         let new = value.clone();
         let str = new.as_str();
-        let vec: Vec<u16> = OsStr::new(str).encode_wide().chain(Some(0).into_iter()).collect();
+        let vec: Vec<u16> = str.encode_utf16().chain(Some(0)).collect();
         vec.as_ptr()
     } else {
         null_mut()
