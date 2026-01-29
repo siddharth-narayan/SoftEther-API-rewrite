@@ -19,9 +19,9 @@ struct UNIXIO {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn GetUnixio4Stdout() -> RawPtr {
-    static out: UNIXIO = UNIXIO { fd: 1, write_mode: true};
+    static OUT: UNIXIO = UNIXIO { fd: 1, write_mode: true};
 
-    &out as *const UNIXIO as RawPtr
+    &OUT as *const UNIXIO as RawPtr
 }
 
 #[unsafe(no_mangle)]

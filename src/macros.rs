@@ -25,3 +25,14 @@ macro_rules! c_compat {
         }
     };
 }
+
+#[macro_export]
+macro_rules! nullcheck {
+    ($ret:expr, $($ptr:expr),+ $(,)?) => {
+        $(
+            if ($ptr).is_null() {
+                return $ret;
+            }
+        )+
+    };
+}

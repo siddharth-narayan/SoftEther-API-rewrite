@@ -29,6 +29,8 @@ use std::ffi::{c_uint, c_void};
 use std::mem::zeroed;
 use std::{mem, ptr};
 
+use crate::nullcheck;
+
 #[repr(C)]
 struct Header {
     size: usize,
@@ -73,7 +75,9 @@ pub extern "C" fn Free(user_ptr: *mut u8) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn Move(destination: *mut u8, source: *mut u8, size: usize) {
-    if destination.is_null() || source.is_null() || size == 0 {
+    nullcheck!((), destination, source);
+
+    if size == 0 {
         return;
     }
 
@@ -83,7 +87,9 @@ pub extern "C" fn Move(destination: *mut u8, source: *mut u8, size: usize) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn Copy(destination: *mut u8, source: *const u8, size: usize) {
-    if destination.is_null() || source.is_null() || size == 0 {
+    nullcheck!((), destination, source);
+
+    if size == 0 {
         return;
     }
 
@@ -102,9 +108,7 @@ pub extern "C" fn Clone(source: *const u8, size: usize) -> *mut u8 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn Zero(addr: *mut u8, size: usize) {
-    if addr.is_null() {
-        return;
-    }
+    nullcheck!((), addr);
 
     unsafe {
         ptr::write_bytes(addr, 0, size);

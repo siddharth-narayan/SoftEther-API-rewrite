@@ -1,5 +1,5 @@
 #![feature(default_field_values)]
-#![allow(unused)]
+#![allow(unused, non_snake_case)]
 mod mem;
 
 mod config;

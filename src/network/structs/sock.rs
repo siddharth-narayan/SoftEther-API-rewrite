@@ -95,8 +95,9 @@
 // #endif	// OS_WIN32
 // };
 
+use crate::nullcheck;
 use crate::{mem::structs::list::List, network::ssl::create_client_ctx};
-use crate::network::ssl::SslVerifyOption;
+use crate::network::ssl::{SSL_CTX_CLIENT, SSL_CTX_SERVER, SslUpgradable, SslVerifyOption};
 use std::{default, ffi::{c_char, c_void}, net::{SocketAddr, TcpStream, UdpSocket}, ptr::{null, null_mut}};
 
 use openssl::ssl::{Ssl, SslStream};
@@ -211,7 +212,7 @@ pub struct Sock {
     bulk_recv_key: *mut Buffer,
     rudp_optimized_mss: u32,
 
-    #[cfg(target_os = "unix")]
+    #[cfg(target_os = "linux")]
     calling_thread: u64, // pthread_t
 
     #[cfg(target_os = "windows")]
@@ -219,10 +220,22 @@ pub struct Sock {
 
     // Rust Internal
     
-    _ssl: Option<SslStream<Socket>>,
-    _socket: Socket,
-    
-    // _socket: std::io
+    // Maybe a manual Default impl is necessary with adding in?
+    // struct MyStruct {
+    //     a: i32,
+    //     b: String,
+    //     c: CustomType, // CustomType does not implement Default
+    // }
+
+    // impl Default for MyStruct {
+    //     fn default() -> Self {
+    //         Self {
+    //             c: CustomType::new(), // your custom default
+    //             ..Default::default()   // a and b use their Default
+    //         }
+    //     }
+    // }
+    _socket: Option<SslUpgradable<Socket>>,
 }
 
 impl Sock {
@@ -253,6 +266,9 @@ impl Sock {
 // SOCK *ListenEx63(UINTport,boollocal_only,boolenable_ca,IP*listen_ip)
 
 // Creates and connects a TCP socket -- Equivalent of using TcpListener::bind
+
+//     sock._socket = Some(SslUpgradable::RawStream(Socket::from(UdpSocket::bind("127.0.0.1:992").unwrap())));
+
 // SOCK *Connect(char*hostname,UINTport)
 // SOCK *ConnectEx(char*hostname,UINTport,UINTtimeout)
 // SOCK *ConnectEx2(char*hostname,UINTport,UINTtimeout,bool*cancel_flag)
@@ -268,13 +284,39 @@ impl Sock {
 // bool StartSSLEx(SOCK*sock,X*x,K*priv,UINTssl_timeout,char*sni_hostname)
 // bool StartSSLEx3(SOCK*sock,X*x,K*priv,LIST*chain,UINTssl_timeout,char*sni_hostname,SSL_VERIFY_OPTION*ssl_option,UINT*ssl_err)
 pub extern "C" fn StartSSLEx3(sock: *mut Sock, cert: *mut X, priv_key: *mut K, chain: *mut List<u8>, timeout: u32, sni_hostname: *mut c_char, verify_options: *mut SslVerifyOption, err: *mut u32) -> bool {
-    let sock = unsafe { &mut *sock };
-    sock._socket = Socket::from(UdpSocket::bind("127.0.0.1:992").unwrap());
-    
-    let ctx = create_client_ctx().unwrap();
-    let ssl = Ssl::new(&ctx).unwrap();
+    nullcheck!(false, sock, cert, priv_key);
 
-    sock._ssl = Some(SslStream::new(ssl, sock._socket).unwrap());
+    let sock = unsafe { &mut *sock };
+
+    // First figure out what this is trying to do before uncommmenting
+    // if (sock.is_connected && sock.sock_type == 3 && !sock.is_listening) {
+    //     sock.is_ssl_secured = true;
+    //     return true;
+    // }
+
+    // Maybe only client-connections are allowed to upgrade ssl be made
+    // if !sock.is_connected || sock.is_listening {
+    //     return false;
+    // }
+
+    if sock._socket.is_none() {
+        return false;
+    }
+
+
+    let ssl = match Ssl::new(if sock.is_server { &SSL_CTX_SERVER } else { &SSL_CTX_CLIENT }) {
+        Ok(s) => s,
+        Err(_) => return false,
+    };
+
+
+    let socket = match sock._socket.take() {
+        Some(s) => s,
+        None => return false,
+    };
+
+    sock._socket = Some(socket.upgrade(ssl));
+
 
     return true;
 }

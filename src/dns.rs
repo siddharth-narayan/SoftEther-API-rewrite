@@ -6,7 +6,7 @@
 
 use std::{ffi::CStr, net::ToSocketAddrs};
 
-use crate::network::util::IP;
+use crate::{network::util::IP, nullcheck};
 
 pub extern "C" fn DnsThreadNum() -> u32 {
     return 1;
@@ -26,11 +26,9 @@ pub extern "C" fn DnsResolve(ipv6: *mut IP, ipv4: *mut IP, hostname: *const i8, 
 
 // TODO: Unfishished
 pub extern "C" fn GetIPEx(mut ip: *const IP, hostname: *const i8, timeout: u32, cancel: *const bool) -> bool {
-    if (ip.is_null() || hostname.is_null() || cancel.is_null()) {
-        return false;
-    }
+    nullcheck!(false, ip, hostname, cancel);
 
-    // use read_volatile to read bool
+    // use read_volatile to read bool ?
 
     let hostname = unsafe{ CStr::from_ptr(hostname) };
     

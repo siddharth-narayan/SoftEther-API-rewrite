@@ -178,11 +178,11 @@ impl Buffer {
     }
 
     pub fn write_buf(&mut self, buffer: &Buffer) {
-        self.write(buffer.clone().buf.as_slice());
+        self.write(buffer.buf.as_slice());
     }
 
     pub fn write_buf_offset(&mut self, buffer: &Buffer) {
-        self.write(&(buffer.clone().buf[buffer.pos..]));
+        self.write(&(buffer.buf[buffer.pos..]));
     }
 
     pub fn write_u8(&mut self, byte: u8) {
