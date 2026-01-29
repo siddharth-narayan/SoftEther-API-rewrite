@@ -4,16 +4,20 @@ use openssl::ssl::SslContext;
 use openssl::ssl::SslFiletype;
 use openssl::ssl::SslMethod;
 use openssl::ssl::SslVerifyMode;
-use tokio::io::ReadHalf;
-use tokio::io::WriteHalf;
-use tokio::net::TcpStream;
+// use tokio::io::ReadHalf;
+// use tokio::io::WriteHalf;
+// use tokio::net::TcpStream;
 // use tokio_openssl::SslStream;
 
 // pub type SslRead = ReadHalf<SslStream<TcpStream>>;
 // pub type SslWrite = WriteHalf<SslStream<TcpStream>>;
 
+pub struct SslVerifyOption {
+
+}
+
 pub fn create_server_ctx() -> Result<SslContext, Error> {
-    let mut builder = SslConnector::builder(SslMethod::tls_server())?;
+    let mut builder = SslConnector::builder(SslMethod::tls())?;
     builder.set_verify(SslVerifyMode::NONE);
     builder.set_certificate_file("cert.pem", SslFiletype::PEM)?;
     builder.set_private_key_file("key.pem", SslFiletype::PEM)?;
@@ -22,12 +26,8 @@ pub fn create_server_ctx() -> Result<SslContext, Error> {
 }
 
 pub fn create_client_ctx() -> Result<SslContext, Error> {
-    let mut builder = SslConnector::builder(SslMethod::tls_client())?;
+    let mut builder = SslConnector::builder(SslMethod::tls())?;
     builder.set_verify(SslVerifyMode::NONE);
 
     Ok(builder.build().into_context())
 }
-
-// bool StartSSL(SOCK*sock,X*x,K*priv)
-// bool StartSSLEx(SOCK*sock,X*x,K*priv,UINTssl_timeout,char*sni_hostname)
-// bool StartSSLEx3(SOCK*sock,X*x,K*priv,LIST*chain,UINTssl_timeout,char*sni_hostname,SSL_VERIFY_OPTION*ssl_option,UINT*ssl_err)

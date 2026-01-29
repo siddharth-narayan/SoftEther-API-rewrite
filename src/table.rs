@@ -87,7 +87,7 @@ pub extern "C" fn GetTableUniStr(name: *const c_char) -> *const c_ushort {
         let new = value.clone();
         let str = new.as_str();
         let vec: Vec<u16> = str.encode_utf16().chain(Some(0)).collect();
-        vec.as_ptr()
+        vec.as_ptr() // TODO: vec dropped after this call -- unsafe
     } else {
         null()
     }
@@ -99,7 +99,7 @@ pub extern "C" fn GetUniErrorStr(err: u32) -> *const c_ushort {
         let new = value.clone();
         let str = new.as_str();
         let vec: Vec<u16> = str.encode_utf16().chain(Some(0)).collect();
-        vec.as_ptr()
+        vec.as_ptr() // TODO: vec dropped after this call -- unsafe
     } else {
         null_mut()
     }

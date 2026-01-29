@@ -17,7 +17,7 @@ impl IP {
         match addr {
             IpAddr::V4(v4) => {
                 let mut addr = [0u8; 16];
-                addr[0..4].copy_from_slice(&u32::to_be_bytes(v4.to_bits()));
+                addr[12..16].copy_from_slice(&u32::to_be_bytes(v4.to_bits()));
 
                 IP { address: addr, ipv6_scope_id: 0 }
             },
@@ -32,6 +32,22 @@ impl IP {
         let slice = self.address[0..4].try_into().unwrap_or_default();
 
         Ipv4Addr::from_bits(u32::from_be_bytes(slice))
+    }
+
+    fn is_ipv4(&self) -> bool {
+        for x in &self.address[0..10] {
+            if *x != 0 { return false; } // First 10 bytes must be 0
+        }
+
+        if self.address[10..12] != [0xff, 0xff] {
+            return false;
+        }
+
+        return true
+    }
+
+    fn is_ipv6(&self) -> bool {
+        return !self.is_ipv4()
     }
 }
 

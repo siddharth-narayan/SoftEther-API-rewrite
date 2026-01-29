@@ -95,13 +95,18 @@
 // #endif	// OS_WIN32
 // };
 
-use std::{default, ffi::{c_char, c_void}, net::SocketAddr, ptr::{null, null_mut}};
+use crate::{mem::structs::list::List, network::ssl::create_client_ctx};
+use crate::network::ssl::SslVerifyOption;
+use std::{default, ffi::{c_char, c_void}, net::{SocketAddr, TcpStream, UdpSocket}, ptr::{null, null_mut}};
 
-use crate::{mem::structs::{buf::Buffer, fifo::Fifo, queue::Queue}, network::{util::IP, structs::x::X}, object::{Lock, RefCounter}};
+use openssl::ssl::{Ssl, SslStream};
+use socket2::Socket;
+
+use crate::{mem::structs::{buf::Buffer, fifo::Fifo, queue::Queue}, network::{util::IP, structs::cert::{X, K}}, object::{Lock, RefCounter}};
 
 #[derive(Default)]
 
-pub struct Socket {
+pub struct Sock {
     ref_count: *mut RefCounter,
     lock: *mut Lock,
     ssl_lock: *mut Lock,
@@ -109,7 +114,7 @@ pub struct Socket {
 
     socket: i32,
     // TODO implement this with openssl crate -- ssl: *mut Ssl
-    // ssl_ctx_st: *mut ssl_ctx,
+    ssl: *mut Ssl,
     sni_hostname: [u8; 256] = [0; 256],
 
     sock_type: u32,
@@ -188,14 +193,14 @@ pub struct Socket {
     // ssl_accept_settings: SslAcceptSettings,
     raw_ip_header_include_flag: bool,
 
-    #[cfg(feature = "enable_ssl_logging")]
-    is_ssl_logging_enabled: bool,
-    #[cfg(feature = "enable_ssl_logging")]
-    ssl_logging_recv: *mut IO,
-    #[cfg(feature = "enable_ssl_logging")]
-    ssl_logging_send: *mut IO,
-    #[cfg(feature = "enable_ssl_logging")]
-    ssl_logging_lock: *mut Lock,
+    // #[cfg(feature = "enable_ssl_logging")]
+    // is_ssl_logging_enabled: bool,
+    // #[cfg(feature = "enable_ssl_logging")]
+    // ssl_logging_recv: *mut IO,
+    // #[cfg(feature = "enable_ssl_logging")]
+    // ssl_logging_send: *mut IO,
+    // #[cfg(feature = "enable_ssl_logging")]
+    // ssl_logging_lock: *mut Lock,
 
     h_accept_event: *mut std::ffi::c_void,
 
@@ -214,10 +219,13 @@ pub struct Socket {
 
     // Rust Internal
     
-    _socket: Option<std::net::UdpSocket>
+    _ssl: Option<SslStream<Socket>>,
+    _socket: Socket,
+    
+    // _socket: std::io
 }
 
-impl Socket {
+impl Sock {
     // Simply creates a socket and 
     // pub fn new_udp(addr: SocketAddr) -> Self {
     //     let mut socket = Self::default();
@@ -244,6 +252,7 @@ impl Socket {
 // SOCK *ListenEx6(UINTport,boollocal_only)
 // SOCK *ListenEx63(UINTport,boollocal_only,boolenable_ca,IP*listen_ip)
 
+// Creates and connects a TCP socket -- Equivalent of using TcpListener::bind
 // SOCK *Connect(char*hostname,UINTport)
 // SOCK *ConnectEx(char*hostname,UINTport,UINTtimeout)
 // SOCK *ConnectEx2(char*hostname,UINTport,UINTtimeout,bool*cancel_flag)
@@ -254,6 +263,21 @@ impl Socket {
 // SOCK *Accept(SOCK*sock)
 // void AcceptInit(SOCK*s)
 // void AcceptInitEx(SOCK*s,boolno_lookup_hostname)
+
+// bool StartSSL(SOCK*sock,X*x,K*priv)
+// bool StartSSLEx(SOCK*sock,X*x,K*priv,UINTssl_timeout,char*sni_hostname)
+// bool StartSSLEx3(SOCK*sock,X*x,K*priv,LIST*chain,UINTssl_timeout,char*sni_hostname,SSL_VERIFY_OPTION*ssl_option,UINT*ssl_err)
+pub extern "C" fn StartSSLEx3(sock: *mut Sock, cert: *mut X, priv_key: *mut K, chain: *mut List<u8>, timeout: u32, sni_hostname: *mut c_char, verify_options: *mut SslVerifyOption, err: *mut u32) -> bool {
+    let sock = unsafe { &mut *sock };
+    sock._socket = Socket::from(UdpSocket::bind("127.0.0.1:992").unwrap());
+    
+    let ctx = create_client_ctx().unwrap();
+    let ssl = Ssl::new(&ctx).unwrap();
+
+    sock._ssl = Some(SslStream::new(ssl, sock._socket).unwrap());
+
+    return true;
+}
 
 // UINT Send(SOCK*sock,void*data,UINTsize,boolsecure)
 // UINT SendTo(SOCK*sock,IP*dest_addr,UINTdest_port,void*data,UINTsize)
