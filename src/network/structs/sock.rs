@@ -1,3 +1,11 @@
+enum SockType {
+    SockTcp = 1,
+    SockUdp = 2,
+    SockInproc = 3,
+    SockRudpListen = 5,
+    SockReverseListen = 6,
+}
+
 // // Socket
 // struct SOCK
 // {
@@ -98,6 +106,7 @@
 use crate::nullcheck;
 use crate::{mem::structs::list::List, network::ssl::create_client_ctx};
 use crate::network::ssl::{SSL_CTX_CLIENT, SSL_CTX_SERVER, SslUpgradable, SslVerifyOption};
+use std::net::{SocketAddrV6, TcpListener};
 use std::{default, ffi::{c_char, c_void}, net::{SocketAddr, TcpStream, UdpSocket}, ptr::{null, null_mut}};
 
 use openssl::ssl::{Ssl, SslStream};
@@ -235,29 +244,72 @@ pub struct Sock {
     //         }
     //     }
     // }
-    _socket: Option<SslUpgradable<Socket>>,
+    _socket: SslUpgradable<Socket>,
 }
 
 impl Sock {
     // Simply creates a socket and 
-    // pub fn new_udp(addr: SocketAddr) -> Self {
-    //     let mut socket = Self::default();
+    pub fn new_udp(addr: SocketAddr) -> Self {
+        Self { _socket: SslUpgradable::RawStream(Socket::from(UdpSocket::bind(addr))), ..Default::default() }
+    }
 
-    //     socket._socket
-    // }
-
-    pub fn new_tcp() {
-
+    pub fn new_tcp(addr: SocketAddr) -> Self {
+        Self { _socket: SslUpgradable::RawStream(Socket::from(TcpStream::connect(addr))), ..Default::default() }
     }
 
 }
 
 
 // SOCK *NewUDP(UINTport)
+
+pub extern "C" fn NewUDP(port: u32) -> *mut Sock {
+    NewUDPEx(port, false)
+}
+
 // SOCK *NewUDPEx(UINTport,boolipv6)
+pub extern "C" fn NewUDPEx(port: u32, is_ipv6: bool) -> *mut Sock {
+    NewUDPEx2(port, is_ipv6, null_mut())
+}
+
 // SOCK *NewUDPEx2(UINTport,boolipv6,IP*ip)
+pub extern "C" fn NewUDPEx2(port: u32, is_ipv6: bool, ip: *mut IP) -> *mut Sock {
+    if is_ipv6 {
+        // TODO: NewUDP6()
+        null_mut()
+    } else {
+        NewUDP4(port, ip)
+    }
+}
+
 // SOCK *NewUDPEx3(UINTport,IP*ip)
+pub extern "C" fn NewUDPEx3(port: u32, ip: *mut IP) -> *mut Sock {
+    if ip.is_null() {
+        return NewUDPEx2(port, false, null_mut());
+    }
+
+    let ip = unsafe { &mut *ip };
+    return NewUDPEx2(port, ip.is_ipv4(), ip)
+}
+
 // SOCK *NewUDP4(UINTport,IP*ip)
+pub extern "C" fn NewUDP4(port: u32, ip: *mut IP) -> *mut Sock {
+    let ip = unsafe { &mut *ip };
+    let ip = ip.to_ipv6();
+
+    // Something about "special ports"? Ignore all port #s greater than 65535
+    let port = if port > u16::MAX as u32 { 0 } else { port as u16 }; 
+    
+    let socket_addr = SocketAddrV6::new(ip, port, flowinfo, scope_id);
+    
+
+    ()
+}
+
+// SOCK *NewUDP6(UINTport,IP*ip)
+pub extern "C" fn NewUDP6(port: u32, ip: *mut IP) -> *mut Sock {
+    
+}
+
 
 // SOCK *Listen(UINTport)
 // SOCK *ListenEx(UINTport,boollocal_only)
@@ -277,12 +329,22 @@ impl Sock {
 // SOCK *BindConnectEx5(IP*localIP,UINTlocalport,char*hostname,UINTport,UINTtimeout,bool*cancel_flag,char*nat_t_svc_name,UINT*nat_t_error_code,booltry_start_ssl,boolno_get_hostname,SSL_VERIFY_OPTION*ssl_option,UINT*ssl_err,char*hint_str,IP*ret_ip)
 
 // SOCK *Accept(SOCK*sock)
+
 // void AcceptInit(SOCK*s)
 // void AcceptInitEx(SOCK*s,boolno_lookup_hostname)
 
-// bool StartSSL(SOCK*sock,X*x,K*priv)
-// bool StartSSLEx(SOCK*sock,X*x,K*priv,UINTssl_timeout,char*sni_hostname)
-// bool StartSSLEx3(SOCK*sock,X*x,K*priv,LIST*chain,UINTssl_timeout,char*sni_hostname,SSL_VERIFY_OPTION*ssl_option,UINT*ssl_err)
+
+// bool StartSSL(SOCK *sock, X *x, K *priv);
+pub extern "C" fn StartSSL(sock: *mut Sock, cert: *mut X, priv_key: *mut K) -> bool {
+    StartSSLEx(sock, cert, priv_key, 0, null_mut())
+}
+
+// bool StartSSLEx(SOCK *sock, X *x, K *priv, UINT ssl_timeout, char *sni_hostname);
+pub extern "C" fn StartSSLEx(sock: *mut Sock, cert: *mut X, priv_key: *mut K, timeout: u32, sni_hostname: *mut c_char) -> bool {
+    StartSSLEx3(sock, cert, priv_key, chain, timeout, sni_hostname, null_mut(), null_mut())
+}
+
+// bool StartSSLEx3(SOCK *sock, X *x, K *priv, LIST *chain, UINT ssl_timeout, char *sni_hostname, SSL_VERIFY_OPTION *ssl_option, UINT *ssl_err);
 pub extern "C" fn StartSSLEx3(sock: *mut Sock, cert: *mut X, priv_key: *mut K, chain: *mut List<u8>, timeout: u32, sni_hostname: *mut c_char, verify_options: *mut SslVerifyOption, err: *mut u32) -> bool {
     nullcheck!(false, sock, cert, priv_key);
 
@@ -310,10 +372,28 @@ pub extern "C" fn StartSSLEx3(sock: *mut Sock, cert: *mut X, priv_key: *mut K, c
     };
 
 
+    // _socket is never left as None by take -- so it's fine
     let socket = match sock._socket.take() {
         Some(s) => s,
         None => return false,
     };
+
+    // Some SslContext options that are set in the original
+    // --  server  --
+    // AddChainSslCertOnDirectory 
+
+    // --  client  -- Adding a default trust store + any intermediate certificates
+    // SSL_CTX_set_default_verify_paths
+    // X509_STORE_add_cert
+    // X509_VERIFY_PARAM_set_flags
+    // X509_VERIFY_PARAM_set1_host
+    // SSL_CTX_set_security_level
+    // SSL_set_tlsext_host_name
+
+    // SSL_use_certificate
+	// SSL_use_PrivateKey
+    // SSL_set_cipher_list
+    // SSL_set1_groups_list
 
     sock._socket = Some(socket.upgrade(ssl));
 

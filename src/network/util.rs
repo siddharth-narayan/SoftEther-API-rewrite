@@ -28,13 +28,19 @@ impl IP {
     }
 
     // TODO: Do we need Ipv6 here?
-    fn to_ip(&self) -> Ipv4Addr {
+    pub fn to_ipv4(&self) -> Ipv4Addr {
         let slice = self.address[0..4].try_into().unwrap_or_default();
 
         Ipv4Addr::from_bits(u32::from_be_bytes(slice))
     }
 
-    fn is_ipv4(&self) -> bool {
+    pub fn to_ipv6(&self) -> Ipv6Addr {
+        let slice = self.address[0..4].try_into().unwrap_or_default();
+
+        Ipv6Addr::from_bits(u128::from_be_bytes(slice))
+    }
+
+    pub fn is_ipv4(&self) -> bool {
         for x in &self.address[0..10] {
             if *x != 0 { return false; } // First 10 bytes must be 0
         }
