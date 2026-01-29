@@ -22,16 +22,15 @@
           overlays = [ fenix.overlays.default ];
         };
 
-        toolchain =
-          with fenix.packages.${system};
-          combine [
-            minimal.rustc
-            minimal.cargo
-            targets.x86_64-unknown-linux-musl.latest.rust-std
-            targets.x86_64-pc-windows-gnu.latest.rust-std
-            targets.i686-pc-windows-gnu.latest.rust-std
-          ];
-
+        # toolchain = (pkgs.fenix.fromManifestFile ./rust-toolchain.toml);
+        toolchain = with pkgs.fenix; combine [
+          minimal.rustc
+          minimal.cargo
+          targets.x86_64-unknown-linux-musl.latest.rust-std
+          targets.x86_64-pc-windows-gnu.latest.rust-std
+          targets.i686-pc-windows-gnu.latest.rust-std
+        ];
+        
         naersk' = naersk.lib.${system}.override {
           cargo = toolchain;
           rustc = toolchain;
@@ -96,13 +95,7 @@
 
             alejandra
             rust-analyzer
-            (pkgs.fenix.stable.withComponents [
-              "cargo"
-              "clippy"
-              "rust-src"
-              "rustc"
-              "rustfmt"
-            ])
+            toolchain
           ];
         };
       }
