@@ -26,6 +26,7 @@ macro_rules! c_compat {
     };
 }
 
+/// Returns the first argument if any of the following arguments are null
 #[macro_export]
 macro_rules! nullcheck {
     ($ret:expr, $($ptr:expr),+ $(,)?) => {

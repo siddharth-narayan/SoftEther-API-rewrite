@@ -106,14 +106,16 @@ enum SockType {
 use crate::nullcheck;
 use crate::{mem::structs::list::List, network::ssl::create_client_ctx};
 use crate::network::ssl::{SSL_CTX_CLIENT, SSL_CTX_SERVER, SslUpgradable, SslVerifyOption};
-use std::net::{SocketAddrV6, TcpListener};
+use std::ffi::CStr;
+use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, SocketAddrV6, TcpListener, ToSocketAddrs};
 use std::{default, ffi::{c_char, c_void}, net::{SocketAddr, TcpStream, UdpSocket}, ptr::{null, null_mut}};
 
 use openssl::ssl::{Ssl, SslStream};
-use socket2::Socket;
+use socket2::{Socket};
 
 use crate::{mem::structs::{buf::Buffer, fifo::Fifo, queue::Queue}, network::{util::IP, structs::cert::{X, K}}, object::{Lock, RefCounter}};
 
+#[derive(Default)]
 pub struct Sock {
     ref_count: *mut RefCounter,
     lock: *mut Lock,
@@ -242,41 +244,88 @@ pub struct Sock {
     //         }
     //     }
     // }
-    _socket: SslUpgradable<Socket>,
+    _socket: Option<SslUpgradable<Socket>>, // Should never be none, as it's initialized in the constructor
 }
 
 impl Sock {
     // Simply creates a socket and 
-    pub fn new_udp(addr: SocketAddr) -> Self {
-        Self { _socket: SslUpgradable::RawStream(Socket::from(UdpSocket::bind(addr))), ..Default::default() }
+    pub fn new_udp(addr: SocketAddr) -> Option<Self> {
+        let raw_socket = match UdpSocket::bind(addr) {
+            Ok(s) => s,
+            Err(e) => { 
+                println!("Failed to create UDP socket for {}", addr);
+                println!("Because of the following error: {}", e);
+                return None; 
+            }
+        };
+
+        let socket = Socket::from(raw_socket);
+        Some(Self { _socket: Some(SslUpgradable::RawStream(socket)), ..Default::default() })
     }
 
-    pub fn new_tcp(addr: SocketAddr) -> Self {
-        Self {
-            is_connected: false,
-            is_async: false,
-            is_server: true,
-            sock_type: SockType::SockTcp as u32,
-            socket: -1, // Cedar should not use this directly,
-            is_listening: true,
-            is_ssl_secured: false,
-            local_port: addr.port() as u32,
+    pub fn new_tcp<A: ToSocketAddrs>(addr: A) -> Option<Self> {
+        let addr = match addr.to_socket_addrs() {
+            Ok(t) => {
+                let collect = t.collect::<Vec<_>>();
+                if collect.len() == 0 {
+                    return None;
+                }
+
+                collect
+            },
             
-            // only_local:
-            // enable_conditional_accept: 
-            _socket: SslUpgradable::RawStream(Socket::from(TcpStream::connect(addr))), ..Default::default() 
-        }
+            Err(e) => {
+                println!("Failed to convert address to SocketAddr");
+                return None;
+            },
+        };
+
+        let raw_socket = match TcpListener::bind(addr[0]) {
+            Ok(s) => s,
+            Err(e) => { 
+                println!("Failed to create TCP socket for {}", addr[0]);
+                println!("Because of the following error: {}", e);
+                return None; 
+            }
+        };
+
+        let socket = Socket::from(raw_socket);
+
+        Some (
+            Self {
+                is_connected: false,
+                is_async: false,
+                is_server: true,
+                sock_type: SockType::SockTcp as u32,
+                socket: -1, // Cedar should not use this directly,
+                is_listening: true,
+                is_ssl_secured: false,
+                local_port: addr[0].port() as u32,
+                
+                // only_local:
+                // enable_conditional_accept: 
+                _socket: Some(SslUpgradable::RawStream(Socket::from(socket))), ..Default::default() 
+            }
+        )
     }
 
     pub fn upgrade(&mut self, ssl: Ssl) {
-        self._socket = self._socket.upgrade(ssl)
+        let inner = match self._socket.take() {
+            Some(s) => s,
+            None => {
+                println!("Socket for {} should never be None", self.local_port);
+                return;
+            }
+        };
+
+        self._socket = Some(inner.upgrade(ssl))
     }
 
-    pub fn as_mut_ptr(self) -> *mut Self<T> {
+    pub fn as_mut_ptr(self) -> *mut Sock {
         Box::into_raw(Box::new(self))
     }
 
-    pub fn free_mut_ptr(ptr: *mut Self<T>) {
+    pub fn free_mut_ptr(ptr: *mut Sock) {
         unsafe { drop(Box::from_raw(ptr)) }
     }
 
@@ -327,9 +376,12 @@ pub extern "C" fn NewUDP4(port: u32, ip: *mut IP) -> *mut Sock {
     // Something about "special ports"? Ignore all port #s greater than 65535
     let port = if port > u16::MAX as u32 { 0 } else { port as u16 }; 
     
-    let socket_addr = SocketAddrV4::new(ip, port, flowinfo, scope_id);
+    let socket_addr = SocketAddrV4::new(ip, port);
     
-    Sock::new_udp(SocketAddr::V4(socket_addr)).as_mut_ptr()
+    match Sock::new_udp(SocketAddr::V4(socket_addr)) {
+        Some(sock) => sock.as_mut_ptr(),
+        None => null_mut()
+    }
 }
 
 // SOCK *NewUDP6(UINTport,IP*ip)
@@ -343,9 +395,12 @@ pub extern "C" fn NewUDP6(port: u32, ip: *mut IP) -> *mut Sock {
     // Something about "special ports"? Ignore all port #s greater than 65535
     let port = if port > u16::MAX as u32 { 0 } else { port as u16 }; 
     
-    let socket_addr = SocketAddrV6::new(ip, port, flowinfo, scope_id);
+    let socket_addr = SocketAddrV6::new(ip, port, 0, 0);
     
-    Sock::new_udp(SocketAddr::V6(socket_addr)).as_mut_ptr()
+    match Sock::new_udp(SocketAddr::V6(socket_addr)) {
+        Some(s) => s.as_mut_ptr(),
+        None => null_mut()
+    }
 }
 
 
@@ -358,7 +413,7 @@ pub extern "C" fn ListenEx2(port: u32, local_only: bool, enable_ca: bool, listen
     nullcheck!(null_mut(), listen_ip);
    
     let listen_ip = unsafe { &mut *listen_ip };
-    let listen_ip = match ip.to_ipv4() {
+    let listen_ip = match listen_ip.to_ipv4() {
         None => { return null_mut(); },
         Some(ip) => ip
     };
@@ -367,8 +422,12 @@ pub extern "C" fn ListenEx2(port: u32, local_only: bool, enable_ca: bool, listen
         return null_mut();
     }
 
-    let socket_addr = SocketAddrV6::new(ip, port as u16, flowinfo, scope_id);
-    Sock::new_tcp(SocketAddr::V4(addr)).as_mut_ptr()
+    let addr = SocketAddrV4::new(listen_ip, port as u16);
+
+    match Sock::new_tcp(SocketAddr::V4(addr)) {
+        Some(s) => s.as_mut_ptr(),
+        None => null_mut()
+    }
 }
 
 // SOCK *ListenEx6(UINTport,boollocal_only)
@@ -376,14 +435,58 @@ pub extern "C" fn ListenEx2(port: u32, local_only: bool, enable_ca: bool, listen
 
 // Creates and connects a TCP socket -- Equivalent of using TcpListener::bind
 
-//     sock._socket = Some(SslUpgradable::RawStream(Socket::from(UdpSocket::bind("127.0.0.1:992").unwrap())));
-
 // SOCK *Connect(char*hostname,UINTport)
 // SOCK *ConnectEx(char*hostname,UINTport,UINTtimeout)
 // SOCK *ConnectEx2(char*hostname,UINTport,UINTtimeout,bool*cancel_flag)
 // SOCK *ConnectEx3(char*hostname,UINTport,UINTtimeout,bool*cancel_flag,char*nat_t_svc_name,UINT*nat_t_error_code,booltry_start_ssl,boolno_get_hostname)
 // SOCK *ConnectEx4(char*hostname,UINTport,UINTtimeout,bool*cancel_flag,char*nat_t_svc_name,UINT*nat_t_error_code,booltry_start_ssl,boolno_get_hostname,IP*ret_ip)
+pub extern "C" fn ConnectEx4(hostname: *mut c_char, port: u32, timeout: u32, should_cancel: *mut bool, nat_table_svc_name: *mut c_char, nat_t_error_code: *mut u32, try_ssl: bool, no_get_hostname: bool) -> *mut Sock {
+    nullcheck!(null_mut(), hostname);
+
+    let hostname = unsafe { match CStr::from_ptr(hostname).to_str() {
+        Ok(s) => s,
+        Err(_) => { return null_mut() }
+    } };
+    
+    // TODO: Resolve hostname to IP 
+    // let raw_socket = match TcpStream::connect(format!("{}:{}", hostname, port)) {
+    //     Ok(s) => s,
+    //     Err(e) => {
+    //         println!("Failed to build a TCP stream using TcpStream::connect");
+    //         return null_mut();
+    //     }
+    // };
+
+    match Sock::new_tcp(format!("{}:{}", hostname, port)) {
+        Some(s) => s.as_mut_ptr(),
+        None => null_mut()
+    }
+}
+
 // SOCK *BindConnectEx5(IP*localIP,UINTlocalport,char*hostname,UINTport,UINTtimeout,bool*cancel_flag,char*nat_t_svc_name,UINT*nat_t_error_code,booltry_start_ssl,boolno_get_hostname,SSL_VERIFY_OPTION*ssl_option,UINT*ssl_err,char*hint_str,IP*ret_ip)
+pub extern "C" fn BindConnectEx5(local_ip: *mut IP, local_port: u32, hostname: *mut c_char, remote_port: u32, timeout: u32, should_cancel: *mut bool, nat_table_svc_name: *mut c_char, nat_t_error_code: *mut u32, try_ssl: bool, no_get_hostname: bool, ssl_option: *mut SslVerifyOption, ssl_err: *mut u32, hint_str: *mut c_char, ret_ip: *mut IP) -> *mut Sock {
+    nullcheck!(null_mut(), hostname);
+
+    let local_ip = unsafe { &mut *local_ip };
+    let hostname = unsafe { match CStr::from_ptr(hostname).to_str() {
+        Ok(s) => s,
+        Err(_) => { return null_mut() }
+    } };
+
+    // We're going to ignore all the string passed in for now, because it seems like it doesn't matter much anyways
+
+    // TODO: It looks like this is supposed to keep a list of IP addresses that the host can read from, including the one passed as an argument.
+    // For now just use the single IP.
+
+    // There's some more complex logic behind whether NAT is chosen, but I don't think it's that important
+    let should_use_nat = !local_ip.is_local();
+    let should_use_only_nat = false;
+
+    // 4 different modes of trying to connect -- TCP, RUDP, DNS, ICMP -- And also try IPv6 versions of each
+
+
+    return null_mut()
+}
 
 // SOCK *Accept(SOCK*sock)
 
@@ -398,7 +501,7 @@ pub extern "C" fn StartSSL(sock: *mut Sock, cert: *mut X, priv_key: *mut K) -> b
 
 // bool StartSSLEx(SOCK *sock, X *x, K *priv, UINT ssl_timeout, char *sni_hostname);
 pub extern "C" fn StartSSLEx(sock: *mut Sock, cert: *mut X, priv_key: *mut K, timeout: u32, sni_hostname: *mut c_char) -> bool {
-    StartSSLEx3(sock, cert, priv_key, chain, timeout, sni_hostname, null_mut(), null_mut())
+    StartSSLEx3(sock, cert, priv_key, null_mut(), timeout, sni_hostname, null_mut(), null_mut())
 }
 
 // bool StartSSLEx3(SOCK *sock, X *x, K *priv, LIST *chain, UINT ssl_timeout, char *sni_hostname, SSL_VERIFY_OPTION *ssl_option, UINT *ssl_err);

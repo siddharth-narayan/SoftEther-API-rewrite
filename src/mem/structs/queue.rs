@@ -33,7 +33,7 @@ pub struct Queue<T> {
 }
 
 impl<T> Queue<T> {
-    pub fn new() -> Self<T> {
+    pub fn new() -> Queue<T> {
         Self {
             ref_count: null_mut(),
             size: 0,
@@ -45,11 +45,11 @@ impl<T> Queue<T> {
         }
     }
 
-    pub fn as_mut_ptr(self) -> *mut Self<T> {
+    pub fn as_mut_ptr(self) -> *mut Queue<T> {
         Box::into_raw(Box::new(self))
     }
 
-    pub fn free_mut_ptr(ptr: *mut Self<T>) {
+    pub fn free_mut_ptr(ptr: *mut Queue<T>) {
         unsafe { drop(Box::from_raw(ptr)) }
     }
 

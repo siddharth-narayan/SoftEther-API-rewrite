@@ -1,4 +1,5 @@
 #![feature(default_field_values)]
+#![feature(ip)]
 #![allow(unused, non_snake_case)]
 mod mem;
 

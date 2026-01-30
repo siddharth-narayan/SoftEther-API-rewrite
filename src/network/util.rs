@@ -1,4 +1,4 @@
-use std::net::{IpAddr, Ipv4Addr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 // IP is likely a struct read and written on the stack
 // So it looks like we can't add a rust-native section
@@ -37,6 +37,28 @@ impl IP {
         }
 
         return true
+    }
+
+    pub fn is_local(&self) -> bool {
+        match self.to_ip() {
+            Some(ip) => !ip.is_global(),
+            None => false
+        }
+    }
+
+
+    pub fn to_ip(&self) -> Option<IpAddr>{
+        if self.is_ipv4() {
+            match self.to_ipv4() {
+                Some(ip) => Some(IpAddr::V4(ip)),
+                None => None
+            }
+        } else {
+            match self.to_ipv6() {
+                Some(ip) => Some(IpAddr::V6(ip)),
+                None => None
+            }
+        }
     }
 
     // TODO: Do we need Ipv6 here?
