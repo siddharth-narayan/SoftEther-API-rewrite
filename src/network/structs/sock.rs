@@ -114,8 +114,6 @@ use socket2::Socket;
 
 use crate::{mem::structs::{buf::Buffer, fifo::Fifo, queue::Queue}, network::{util::IP, structs::cert::{X, K}}, object::{Lock, RefCounter}};
 
-#[derive(Default)]
-
 pub struct Sock {
     ref_count: *mut RefCounter,
     lock: *mut Lock,
@@ -254,7 +252,32 @@ impl Sock {
     }
 
     pub fn new_tcp(addr: SocketAddr) -> Self {
-        Self { _socket: SslUpgradable::RawStream(Socket::from(TcpStream::connect(addr))), ..Default::default() }
+        Self {
+            is_connected: false,
+            is_async: false,
+            is_server: true,
+            sock_type: SockType::SockTcp as u32,
+            socket: -1, // Cedar should not use this directly,
+            is_listening: true,
+            is_ssl_secured: false,
+            local_port: addr.port() as u32,
+            
+            // only_local:
+            // enable_conditional_accept: 
+            _socket: SslUpgradable::RawStream(Socket::from(TcpStream::connect(addr))), ..Default::default() 
+        }
+    }
+
+    pub fn upgrade(&mut self, ssl: Ssl) {
+        self._socket = self._socket.upgrade(ssl)
+    }
+
+    pub fn as_mut_ptr(self) -> *mut Self<T> {
+        Box::into_raw(Box::new(self))
+    }
+
+    pub fn free_mut_ptr(ptr: *mut Self<T>) {
+        unsafe { drop(Box::from_raw(ptr)) }
     }
 
 }
@@ -293,27 +316,61 @@ pub extern "C" fn NewUDPEx3(port: u32, ip: *mut IP) -> *mut Sock {
 
 // SOCK *NewUDP4(UINTport,IP*ip)
 pub extern "C" fn NewUDP4(port: u32, ip: *mut IP) -> *mut Sock {
+    // If port != 0 we're listening, otherwise we're connecting?
+
     let ip = unsafe { &mut *ip };
-    let ip = ip.to_ipv6();
+    let ip = match ip.to_ipv4() {
+        None => { return null_mut(); },
+        Some(ip) => ip
+    };
+
+    // Something about "special ports"? Ignore all port #s greater than 65535
+    let port = if port > u16::MAX as u32 { 0 } else { port as u16 }; 
+    
+    let socket_addr = SocketAddrV4::new(ip, port, flowinfo, scope_id);
+    
+    Sock::new_udp(SocketAddr::V4(socket_addr)).as_mut_ptr()
+}
+
+// SOCK *NewUDP6(UINTport,IP*ip)
+pub extern "C" fn NewUDP6(port: u32, ip: *mut IP) -> *mut Sock {
+    let ip = unsafe { &mut *ip };
+       let ip = match ip.to_ipv6() {
+        None => { return null_mut(); },
+        Some(ip) => ip
+    };
 
     // Something about "special ports"? Ignore all port #s greater than 65535
     let port = if port > u16::MAX as u32 { 0 } else { port as u16 }; 
     
     let socket_addr = SocketAddrV6::new(ip, port, flowinfo, scope_id);
     
-
-    ()
-}
-
-// SOCK *NewUDP6(UINTport,IP*ip)
-pub extern "C" fn NewUDP6(port: u32, ip: *mut IP) -> *mut Sock {
-    
+    Sock::new_udp(SocketAddr::V6(socket_addr)).as_mut_ptr()
 }
 
 
+
+// Listens TCP
 // SOCK *Listen(UINTport)
 // SOCK *ListenEx(UINTport,boollocal_only)
 // SOCK *ListenEx2(UINTport,boollocal_only,boolenable_ca,IP*listen_ip)
+pub extern "C" fn ListenEx2(port: u32, local_only: bool, enable_ca: bool, listen_ip: *mut IP) -> *mut Sock {
+    nullcheck!(null_mut(), listen_ip);
+   
+    let listen_ip = unsafe { &mut *listen_ip };
+    let listen_ip = match ip.to_ipv4() {
+        None => { return null_mut(); },
+        Some(ip) => ip
+    };
+    
+    if port == 0 || port > 65535 {
+        return null_mut();
+    }
+
+    let socket_addr = SocketAddrV6::new(ip, port as u16, flowinfo, scope_id);
+    Sock::new_tcp(SocketAddr::V4(addr)).as_mut_ptr()
+}
+
 // SOCK *ListenEx6(UINTport,boollocal_only)
 // SOCK *ListenEx63(UINTport,boollocal_only,boolenable_ca,IP*listen_ip)
 
@@ -361,21 +418,9 @@ pub extern "C" fn StartSSLEx3(sock: *mut Sock, cert: *mut X, priv_key: *mut K, c
     //     return false;
     // }
 
-    if sock._socket.is_none() {
-        return false;
-    }
-
-
     let ssl = match Ssl::new(if sock.is_server { &SSL_CTX_SERVER } else { &SSL_CTX_CLIENT }) {
         Ok(s) => s,
         Err(_) => return false,
-    };
-
-
-    // _socket is never left as None by take -- so it's fine
-    let socket = match sock._socket.take() {
-        Some(s) => s,
-        None => return false,
     };
 
     // Some SslContext options that are set in the original
@@ -395,7 +440,7 @@ pub extern "C" fn StartSSLEx3(sock: *mut Sock, cert: *mut X, priv_key: *mut K, c
     // SSL_set_cipher_list
     // SSL_set1_groups_list
 
-    sock._socket = Some(socket.upgrade(ssl));
+    sock.upgrade(ssl); // make `upgrade` take arguments for certs, ssl settings, etc
 
 
     return true;

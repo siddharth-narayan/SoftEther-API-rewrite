@@ -27,19 +27,6 @@ impl IP {
         }
     }
 
-    // TODO: Do we need Ipv6 here?
-    pub fn to_ipv4(&self) -> Ipv4Addr {
-        let slice = self.address[0..4].try_into().unwrap_or_default();
-
-        Ipv4Addr::from_bits(u32::from_be_bytes(slice))
-    }
-
-    pub fn to_ipv6(&self) -> Ipv6Addr {
-        let slice = self.address[0..4].try_into().unwrap_or_default();
-
-        Ipv6Addr::from_bits(u128::from_be_bytes(slice))
-    }
-
     pub fn is_ipv4(&self) -> bool {
         for x in &self.address[0..10] {
             if *x != 0 { return false; } // First 10 bytes must be 0
@@ -51,6 +38,29 @@ impl IP {
 
         return true
     }
+
+    // TODO: Do we need Ipv6 here?
+    pub fn to_ipv4(&self) -> Option<Ipv4Addr> {
+        if !self.is_ipv4() {
+            return None
+        }
+
+        let slice = self.address[0..4].try_into().unwrap_or_default();
+
+        Some(Ipv4Addr::from_bits(u32::from_be_bytes(slice)))
+    }
+
+    pub fn to_ipv6(&self) -> Option<Ipv6Addr> {
+        if self.is_ipv4() {
+            return None
+        }
+
+        let slice = self.address[0..4].try_into().unwrap_or_default();
+
+        Some(Ipv6Addr::from_bits(u128::from_be_bytes(slice)))
+    }
+
+
 
     fn is_ipv6(&self) -> bool {
         return !self.is_ipv4()
