@@ -23,13 +23,7 @@
         };
 
         # toolchain = (pkgs.fenix.fromManifestFile ./rust-toolchain.toml);
-        toolchain = with pkgs.fenix; combine [
-          minimal.rustc
-          minimal.cargo
-          targets.x86_64-unknown-linux-musl.latest.rust-std
-          targets.x86_64-pc-windows-gnu.latest.rust-std
-          targets.i686-pc-windows-gnu.latest.rust-std
-        ];
+        toolchain = pkgs.fenix.complete.toolchain;
         
         naersk' = naersk.lib.${system}.override {
           cargo = toolchain;
@@ -94,7 +88,6 @@
             openssl
 
             alejandra
-            rust-analyzer
             toolchain
           ];
         };
