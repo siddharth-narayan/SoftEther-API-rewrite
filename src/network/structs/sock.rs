@@ -108,10 +108,14 @@ use crate::{mem::structs::list::List, network::ssl::create_client_ctx};
 use crate::network::ssl::{SSL_CTX_CLIENT, SSL_CTX_SERVER, SslUpgradable, SslVerifyOption};
 use std::ffi::CStr;
 use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, SocketAddrV6, TcpListener, ToSocketAddrs};
+use std::os::fd::AsRawFd;
+use std::os::linux::raw;
+use std::thread;
+use std::time::Duration;
 use std::{default, ffi::{c_char, c_void}, net::{SocketAddr, TcpStream, UdpSocket}, ptr::{null, null_mut}};
 
 use openssl::ssl::{Ssl, SslStream};
-use socket2::{Socket};
+use socket2::{Domain, SockAddr, Socket, Type};
 
 use crate::{mem::structs::{buf::Buffer, fifo::Fifo, queue::Queue}, network::{util::IP, structs::cert::{X, K}}, object::{Lock, RefCounter}};
 
@@ -259,11 +263,13 @@ impl Sock {
             }
         };
 
+        raw_socket.connect(addr);
+
         let socket = Socket::from(raw_socket);
         Some(Self { _socket: Some(SslUpgradable::RawStream(socket)), ..Default::default() })
     }
 
-    pub fn new_tcp<A: ToSocketAddrs>(addr: A) -> Option<Self> {
+    pub fn tcp_listen<A: ToSocketAddrs>(addr: A) -> Option<Self> {
         let addr = match addr.to_socket_addrs() {
             Ok(t) => {
                 let collect = t.collect::<Vec<_>>();
@@ -280,14 +286,22 @@ impl Sock {
             },
         };
 
-        let raw_socket = match TcpListener::bind(addr[0]) {
+        let raw_socket = match Socket::new(Domain::IPV4, Type::STREAM, None) {
             Ok(s) => s,
-            Err(e) => { 
-                println!("Failed to create TCP socket for {}", addr[0]);
-                println!("Because of the following error: {}", e);
-                return None; 
+            Err(e) => {
+                println!("Failed to create a TCP socket: {}", e);
+                return None;
             }
         };
+
+        // let raw_socket = match TcpListener::bind(addr[0]) {
+        //     Ok(s) => s,
+        //     Err(e) => { 
+        //         println!("Failed to create TCP socket for {}", addr[0]);
+        //         println!("Because of the following error: {}", e);
+        //         return None; 
+        //     }
+        // };
 
         let socket = Socket::from(raw_socket);
 
@@ -305,6 +319,70 @@ impl Sock {
                 // only_local:
                 // enable_conditional_accept: 
                 _socket: Some(SslUpgradable::RawStream(Socket::from(socket))), ..Default::default() 
+            }
+        )
+    }
+
+    // Connects by any means necessary, not just TCP
+    pub fn connect(local_address: Option<SocketAddr>, remote_address: SocketAddr, timeout: Duration) -> Option<Self> {
+        let raw_socket = match Socket::new(Domain::IPV4, Type::STREAM, None) {
+            Ok(s) => s,
+            Err(e) => {
+                println!("Failed to create a TCP socket: {}", e);
+                return None;
+            }
+        };
+
+        match local_address {
+            Some(s) => {
+                raw_socket.bind(&SockAddr::from(s.clone()));
+            },
+            _ => (),
+        }
+
+        match raw_socket.connect_timeout(&SockAddr::from(remote_address.clone()), timeout) {
+            Ok(_) => (),
+            Err(e) => {
+                println!("Failed to connect to remote: {}", e);
+                return None;
+            }
+        }
+
+        thread::scope(|s| {
+            s.spawn(|| {
+                Self::connect_method_tcp_simple(&remote_address)
+            });
+
+            s.spawn(|| {
+                Self::connect_method_rudp_and_tcp(&remote_address)
+            });
+
+            s.spawn(|| {
+                Self::connect_method_dns(&remote_address)
+            });
+
+            s.spawn(|| {
+                Self::connect_method_icmp(&remote_address)
+            });
+        });
+        
+        Some (
+            Self {
+                is_connected: false,
+                is_async: false,
+                is_server: false,
+                sock_type: SockType::SockTcp as u32,
+                socket: raw_socket.as_raw_fd(), // Cedar should not use this directly,
+                is_listening: false,
+                is_ssl_secured: false,
+                local_port: match local_address {
+                    Some(p) => p.port().into(),
+                    None => 0,
+                },
+                
+                // only_local:
+                // enable_conditional_accept: 
+                _socket: Some(SslUpgradable::RawStream(raw_socket)), ..Default::default()
             }
         )
     }
@@ -331,6 +409,24 @@ impl Sock {
 
 }
 
+// The 4 connection strategies
+impl Sock {
+    pub fn connect_method_tcp_simple(remote: &SocketAddr) {
+
+    }
+
+    pub fn connect_method_rudp_and_tcp(remote: &SocketAddr) {
+
+    }
+
+    pub fn connect_method_dns(remote: &SocketAddr) {
+
+    }
+
+    pub fn connect_method_icmp(remote: &SocketAddr) {
+
+    }
+}
 
 // SOCK *NewUDP(UINTport)
 
@@ -424,7 +520,7 @@ pub extern "C" fn ListenEx2(port: u32, local_only: bool, enable_ca: bool, listen
 
     let addr = SocketAddrV4::new(listen_ip, port as u16);
 
-    match Sock::new_tcp(SocketAddr::V4(addr)) {
+    match Sock::tcp_listen(SocketAddr::V4(addr)) {
         Some(s) => s.as_mut_ptr(),
         None => null_mut()
     }
@@ -457,7 +553,7 @@ pub extern "C" fn ConnectEx4(hostname: *mut c_char, port: u32, timeout: u32, sho
     //     }
     // };
 
-    match Sock::new_tcp(format!("{}:{}", hostname, port)) {
+    match Sock::tcp_listen(format!("{}:{}", hostname, port)) {
         Some(s) => s.as_mut_ptr(),
         None => null_mut()
     }
@@ -468,18 +564,27 @@ pub extern "C" fn BindConnectEx5(local_ip: *mut IP, local_port: u32, hostname: *
     nullcheck!(null_mut(), hostname);
 
     let local_ip = unsafe { &mut *local_ip };
+    let local_ip = match local_ip.to_ip() {
+        Some(ip) => ip,
+        None => { 
+            return null_mut() 
+        }
+    };
+
     let hostname = unsafe { match CStr::from_ptr(hostname).to_str() {
         Ok(s) => s,
         Err(_) => { return null_mut() }
     } };
 
+    let local_address = SocketAddr::from((local_ip, local_port as u16));
+    
     // We're going to ignore all the string passed in for now, because it seems like it doesn't matter much anyways
 
     // TODO: It looks like this is supposed to keep a list of IP addresses that the host can read from, including the one passed as an argument.
     // For now just use the single IP.
 
     // There's some more complex logic behind whether NAT is chosen, but I don't think it's that important
-    let should_use_nat = !local_ip.is_local();
+    let should_use_nat = local_ip.is_global();
     let should_use_only_nat = false;
 
     // 4 different modes of trying to connect -- TCP, RUDP, DNS, ICMP -- And also try IPv6 versions of each

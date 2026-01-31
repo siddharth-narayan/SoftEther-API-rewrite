@@ -4,9 +4,16 @@
 // bool DnsResolve(IP*ipv6,IP*ipv4,constchar*hostname,UINTtimeout,volatileconstbool*cancel_flag)
 // bool GetIPEx(IP*ip,constchar*hostname,UINTtimeout,volatileconstbool*cancel_flag)
 
-use std::{ffi::CStr, net::ToSocketAddrs};
+use std::{ffi::CStr, net::{SocketAddr, ToSocketAddrs}};
 
 use crate::{network::util::IP, nullcheck};
+
+pub fn resolve(hostname: &str) -> Option<Vec<SocketAddr>> {
+    match (hostname, 0).to_socket_addrs() {
+        Ok(socket_iter) => Some(socket_iter.collect()),
+        Err(e) => None,
+    }
+}
 
 pub extern "C" fn DnsThreadNum() -> u32 {
     return 1;
