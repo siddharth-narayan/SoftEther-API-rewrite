@@ -6,11 +6,18 @@
 
 use std::{ffi::CStr, net::{SocketAddr, ToSocketAddrs}};
 
-use crate::{network::util::IP, nullcheck};
+use crate::{network::{structs::sock, util::IP}, nullcheck};
 
+// Output vec guaranteed to hold one address
 pub fn resolve(hostname: &str) -> Option<Vec<SocketAddr>> {
     match (hostname, 0).to_socket_addrs() {
-        Ok(socket_iter) => Some(socket_iter.collect()),
+        Ok(socket_iter) => {
+            if socket_iter.len() < 1 {
+                return None;
+            }
+
+            Some(socket_iter.collect())
+        },
         Err(e) => None,
     }
 }

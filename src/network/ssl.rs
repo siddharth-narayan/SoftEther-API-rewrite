@@ -27,6 +27,19 @@ pub enum SslUpgradable<S: Read + Write> {
 }
 
 impl<S: Read + Write> SslUpgradable<S> {
+    pub fn is_encrypted(&self) -> bool {
+        match self {
+            Self::RawStream(_) => false,
+            Self::SslStream(_) => true,
+        }
+    }
+
+    pub fn is_unencrypted(&self) -> bool {
+        !self.is_encrypted()
+    }
+}
+
+impl<S: Read + Write> SslUpgradable<S> {
     pub fn upgrade(self, ssl: Ssl) -> Self {
         match self {
             SslUpgradable::RawStream(raw) => {

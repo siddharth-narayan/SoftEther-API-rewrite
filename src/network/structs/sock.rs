@@ -107,10 +107,11 @@ use crate::nullcheck;
 use crate::{mem::structs::list::List, network::ssl::create_client_ctx};
 use crate::network::ssl::{SSL_CTX_CLIENT, SSL_CTX_SERVER, SslUpgradable, SslVerifyOption};
 use std::ffi::CStr;
-use std::net::{IpAddr, Ipv4Addr, SocketAddrV4, SocketAddrV6, TcpListener, ToSocketAddrs};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, TcpListener, ToSocketAddrs};
 use std::os::fd::AsRawFd;
 use std::os::linux::raw;
-use std::thread;
+use std::sync::mpsc;
+use std::thread::{self, sleep};
 use std::time::Duration;
 use std::{default, ffi::{c_char, c_void}, net::{SocketAddr, TcpStream, UdpSocket}, ptr::{null, null_mut}};
 
@@ -252,9 +253,66 @@ pub struct Sock {
 }
 
 impl Sock {
-    // Simply creates a socket and 
+    pub fn listen_tcp(addr: SocketAddr) -> Option<Self> {
+        let listener = match TcpListener::bind(addr) {
+            Ok(l) => l,
+            Err(e) => {
+                println!("Failed to create a TCP listener: {}", e);
+                return None;
+            }
+        };
+
+        let raw_socket = Socket::from(listener);
+
+        Some (
+            Self {
+                is_connected: false,
+                is_async: false,
+                is_server: true,
+                sock_type: SockType::SockTcp as u32,
+                socket: raw_socket.as_raw_fd(), // Cedar should not use this directly,
+                is_listening: true,
+                is_ssl_secured: false,
+                local_port: addr.port() as u32,
+                
+                // only_local:
+                // enable_conditional_accept: 
+                _socket: Some(SslUpgradable::RawStream(raw_socket)), ..Default::default() 
+            }
+        )
+    }
+
+    pub fn connect_tcp(addr: SocketAddr) -> Option<Self> {
+        let listener = match TcpStream::connect(addr) {
+            Ok(s) => s,
+            Err(e) => {
+                println!("Failed to create a TCP stream: {}", e);
+                return None;
+            }
+        };
+
+        let raw_socket = Socket::from(listener);
+
+        Some (
+            Self {
+                is_connected: true,
+                is_async: false,
+                is_server: false,
+                sock_type: SockType::SockTcp as u32,
+                socket: raw_socket.as_raw_fd(),
+                is_listening: false,
+                is_ssl_secured: false,
+                // local_port: addr.port() as u32, // Should we find out what this is? Is that even neccessary?
+                
+                // only_local:
+                // enable_conditional_accept: 
+                _socket: Some(SslUpgradable::RawStream(raw_socket)), ..Default::default() 
+            }
+        )
+    }
+
     pub fn new_udp(addr: SocketAddr) -> Option<Self> {
-        let raw_socket = match UdpSocket::bind(addr) {
+        let socket = match UdpSocket::bind(addr) {
             Ok(s) => s,
             Err(e) => { 
                 println!("Failed to create UDP socket for {}", addr);
@@ -263,126 +321,111 @@ impl Sock {
             }
         };
 
-        raw_socket.connect(addr);
-
-        let socket = Socket::from(raw_socket);
-        Some(Self { _socket: Some(SslUpgradable::RawStream(socket)), ..Default::default() })
-    }
-
-    pub fn tcp_listen<A: ToSocketAddrs>(addr: A) -> Option<Self> {
-        let addr = match addr.to_socket_addrs() {
-            Ok(t) => {
-                let collect = t.collect::<Vec<_>>();
-                if collect.len() == 0 {
-                    return None;
-                }
-
-                collect
-            },
-            
-            Err(e) => {
-                println!("Failed to convert address to SocketAddr");
-                return None;
-            },
-        };
-
-        let raw_socket = match Socket::new(Domain::IPV4, Type::STREAM, None) {
-            Ok(s) => s,
-            Err(e) => {
-                println!("Failed to create a TCP socket: {}", e);
-                return None;
-            }
-        };
-
-        // let raw_socket = match TcpListener::bind(addr[0]) {
-        //     Ok(s) => s,
-        //     Err(e) => { 
-        //         println!("Failed to create TCP socket for {}", addr[0]);
-        //         println!("Because of the following error: {}", e);
-        //         return None; 
-        //     }
-        // };
-
-        let socket = Socket::from(raw_socket);
+        let raw_socket = Socket::from(socket);
 
         Some (
             Self {
                 is_connected: false,
                 is_async: false,
                 is_server: true,
-                sock_type: SockType::SockTcp as u32,
-                socket: -1, // Cedar should not use this directly,
+                sock_type: SockType::SockUdp as u32,
+                socket: raw_socket.as_raw_fd(),
                 is_listening: true,
                 is_ssl_secured: false,
-                local_port: addr[0].port() as u32,
+                local_port: addr.port() as u32,
                 
                 // only_local:
                 // enable_conditional_accept: 
-                _socket: Some(SslUpgradable::RawStream(Socket::from(socket))), ..Default::default() 
+                _socket: Some(SslUpgradable::RawStream(raw_socket)), ..Default::default() 
+            }
+        )
+    }
+
+    pub fn connect_udp(addr: SocketAddr) -> Option<Self> {
+        let local_socket_addr = 
+        if addr.is_ipv4() { 
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0))
+        } else {
+            SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::UNSPECIFIED, 0, 0, 0))
+        };
+
+        let socket = match UdpSocket::bind(local_socket_addr) {
+            Ok(s) => s,
+            Err(e) => { 
+                println!("Failed to create UDP socket for {}", addr);
+                println!("Because of the following error: {}", e);
+                return None; 
+            }
+        };
+
+        match socket.connect(addr) {
+            Ok(_) => (),
+            Err(e) => {
+                println!("Failed to connect UDP port: {}", e);
+                return None;
+            }
+        };
+
+        let raw_socket = Socket::from(socket);
+        
+        Some (
+            Self {
+                is_connected: true,
+                is_async: false,
+                is_server: false,
+                sock_type: SockType::SockTcp as u32,
+                socket: raw_socket.as_raw_fd(),
+                is_listening: false,
+                is_ssl_secured: false,
+                // local_port: addr.port() as u32, // Should we find out what this is? Is that even neccessary?
+                
+                // only_local:
+                // enable_conditional_accept: 
+                _socket: Some(SslUpgradable::RawStream(raw_socket)), ..Default::default() 
             }
         )
     }
 
     // Connects by any means necessary, not just TCP
-    pub fn connect(local_address: Option<SocketAddr>, remote_address: SocketAddr, timeout: Duration) -> Option<Self> {
-        let raw_socket = match Socket::new(Domain::IPV4, Type::STREAM, None) {
-            Ok(s) => s,
-            Err(e) => {
-                println!("Failed to create a TCP socket: {}", e);
+    pub fn connect(local_address: SocketAddr, remote_addresses: Vec<SocketAddr>, timeout: Duration) -> Option<Self> {
+        if remote_addresses.len() < 1 {
+            return None;
+        }
+
+        let should_use_nat = !local_address.ip().is_global();
+        let should_use_only_nat = false;
+        
+        let socket = if !should_use_nat {
+            Self::connect_method_tcp_simple(&local_address, &remote_addresses[0])
+        } else if should_use_only_nat {
+            Self::connect_method_rudp_and_tcp(&remote_addresses[0])
+        } else {
+            Self::connect_method_all(&local_address, remote_addresses)
+        };
+
+        let socket = match socket {
+            Some(s) => s,
+            None => {
+                println!("Failed to create a socket");
                 return None;
             }
         };
 
-        match local_address {
-            Some(s) => {
-                raw_socket.bind(&SockAddr::from(s.clone()));
-            },
-            _ => (),
-        }
-
-        match raw_socket.connect_timeout(&SockAddr::from(remote_address.clone()), timeout) {
-            Ok(_) => (),
-            Err(e) => {
-                println!("Failed to connect to remote: {}", e);
-                return None;
-            }
-        }
-
-        thread::scope(|s| {
-            s.spawn(|| {
-                Self::connect_method_tcp_simple(&remote_address)
-            });
-
-            s.spawn(|| {
-                Self::connect_method_rudp_and_tcp(&remote_address)
-            });
-
-            s.spawn(|| {
-                Self::connect_method_dns(&remote_address)
-            });
-
-            s.spawn(|| {
-                Self::connect_method_icmp(&remote_address)
-            });
-        });
-        
         Some (
             Self {
-                is_connected: false,
+                is_connected: true,
                 is_async: false,
                 is_server: false,
-                sock_type: SockType::SockTcp as u32,
-                socket: raw_socket.as_raw_fd(), // Cedar should not use this directly,
+                // sock_type: SockType::SockTcp as u32,
+                socket: socket.as_raw_fd(), // Cedar should not use this directly,
                 is_listening: false,
                 is_ssl_secured: false,
-                local_port: match local_address {
-                    Some(p) => p.port().into(),
-                    None => 0,
-                },
+                local_port: local_address.port() as u32,
                 
                 // only_local:
                 // enable_conditional_accept: 
-                _socket: Some(SslUpgradable::RawStream(raw_socket)), ..Default::default()
+                _socket: Some(SslUpgradable::RawStream(socket)),
+                ..Default::default()
             }
         )
     }
@@ -406,25 +449,58 @@ impl Sock {
     pub fn free_mut_ptr(ptr: *mut Sock) {
         unsafe { drop(Box::from_raw(ptr)) }
     }
-
 }
 
 // The 4 connection strategies
 impl Sock {
-    pub fn connect_method_tcp_simple(remote: &SocketAddr) {
-
+    pub fn connect_method_tcp_simple(local: &SocketAddr, remote: &SocketAddr) -> Option<Socket> {
+        todo!()
     }
 
-    pub fn connect_method_rudp_and_tcp(remote: &SocketAddr) {
-
+    pub fn connect_method_rudp_and_tcp(remote: &SocketAddr) -> Option<Socket> {
+        todo!()
     }
 
-    pub fn connect_method_dns(remote: &SocketAddr) {
-
+    pub fn connect_method_dns(remote: &SocketAddr) -> Option<Socket> {
+       todo!()
     }
 
-    pub fn connect_method_icmp(remote: &SocketAddr) {
+    pub fn connect_method_icmp(remote: &SocketAddr) -> Option<Socket> {
+        todo!()
+    }
 
+    pub fn connect_method_all(local_address: &SocketAddr, remote_addresses: Vec<SocketAddr>) -> Option<Socket> {
+        for address in remote_addresses {
+                thread::scope(|s| {
+                let mut threads = Vec::new();
+                threads.push(s.spawn(|| {
+                    Self::connect_method_tcp_simple(local_address, &address)
+                }));
+
+                threads.push(s.spawn(|| {
+                    Self::connect_method_rudp_and_tcp(&address)
+                }));
+
+                threads.push(s.spawn(|| {
+                    Self::connect_method_dns(&address)
+                }));
+
+                threads.push(s.spawn(|| {
+                    Self::connect_method_icmp(&address)
+                }));
+
+                while !threads.iter().all(|t| { t.is_finished() }) {}
+
+                threads.into_iter().find_map(|t| {
+                    match t.join() {
+                        Ok(x) => Some(x),
+                        Err(_) => None
+                    }
+                })
+            });
+        }
+
+        None
     }
 }
 
@@ -459,8 +535,10 @@ pub extern "C" fn NewUDPEx3(port: u32, ip: *mut IP) -> *mut Sock {
     return NewUDPEx2(port, ip.is_ipv4(), ip)
 }
 
+// TODO: Check if this actually connects to the remote, then use either connect_udp or listen_udp
 // SOCK *NewUDP4(UINTport,IP*ip)
 pub extern "C" fn NewUDP4(port: u32, ip: *mut IP) -> *mut Sock {
+    nullcheck!(null_mut(), ip);
     // If port != 0 we're listening, otherwise we're connecting?
 
     let ip = unsafe { &mut *ip };
@@ -520,7 +598,7 @@ pub extern "C" fn ListenEx2(port: u32, local_only: bool, enable_ca: bool, listen
 
     let addr = SocketAddrV4::new(listen_ip, port as u16);
 
-    match Sock::tcp_listen(SocketAddr::V4(addr)) {
+    match Sock::listen_tcp(SocketAddr::V4(addr)) {
         Some(s) => s.as_mut_ptr(),
         None => null_mut()
     }
@@ -553,10 +631,11 @@ pub extern "C" fn ConnectEx4(hostname: *mut c_char, port: u32, timeout: u32, sho
     //     }
     // };
 
-    match Sock::tcp_listen(format!("{}:{}", hostname, port)) {
-        Some(s) => s.as_mut_ptr(),
-        None => null_mut()
-    }
+    // match Sock::listen_tcp(format!("{}:{}", hostname, port)) {
+    //     Some(s) => s.as_mut_ptr(),
+    //     None => null_mut()
+    // }
+    todo!()
 }
 
 // SOCK *BindConnectEx5(IP*localIP,UINTlocalport,char*hostname,UINTport,UINTtimeout,bool*cancel_flag,char*nat_t_svc_name,UINT*nat_t_error_code,booltry_start_ssl,boolno_get_hostname,SSL_VERIFY_OPTION*ssl_option,UINT*ssl_err,char*hint_str,IP*ret_ip)
@@ -579,16 +658,6 @@ pub extern "C" fn BindConnectEx5(local_ip: *mut IP, local_port: u32, hostname: *
     let local_address = SocketAddr::from((local_ip, local_port as u16));
     
     // We're going to ignore all the string passed in for now, because it seems like it doesn't matter much anyways
-
-    // TODO: It looks like this is supposed to keep a list of IP addresses that the host can read from, including the one passed as an argument.
-    // For now just use the single IP.
-
-    // There's some more complex logic behind whether NAT is chosen, but I don't think it's that important
-    let should_use_nat = local_ip.is_global();
-    let should_use_only_nat = false;
-
-    // 4 different modes of trying to connect -- TCP, RUDP, DNS, ICMP -- And also try IPv6 versions of each
-
 
     return null_mut()
 }
