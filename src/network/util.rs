@@ -40,24 +40,15 @@ impl IP {
     }
 
     pub fn is_local(&self) -> bool {
-        match self.to_ip() {
-            Some(ip) => !ip.is_global(),
-            None => false
-        }
+        !self.to_ip().is_global()
     }
 
 
-    pub fn to_ip(&self) -> Option<IpAddr>{
+    pub fn to_ip(&self) -> IpAddr {
         if self.is_ipv4() {
-            match self.to_ipv4() {
-                Some(ip) => Some(IpAddr::V4(ip)),
-                None => None
-            }
+            IpAddr::V4(self.to_ipv4().expect("self was expected to be IPv4"))
         } else {
-            match self.to_ipv6() {
-                Some(ip) => Some(IpAddr::V6(ip)),
-                None => None
-            }
+            IpAddr::V4(self.to_ipv4().expect("self was expected to be IPv6"))
         }
     }
 

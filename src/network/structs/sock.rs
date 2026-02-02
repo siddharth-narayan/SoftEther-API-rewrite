@@ -103,13 +103,14 @@ enum SockType {
 // #endif	// OS_WIN32
 // };
 
+use crate::dns::{resolve, resolve_all, resolve_all_ipv4, resolve_all_ipv6, resolve_ipv4, resolve_ipv6};
+use crate::network::structs::sock;
 use crate::nullcheck;
 use crate::{mem::structs::list::List, network::ssl::create_client_ctx};
 use crate::network::ssl::{SSL_CTX_CLIENT, SSL_CTX_SERVER, SslUpgradable, SslVerifyOption};
 use std::ffi::CStr;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, TcpListener, ToSocketAddrs};
 use std::os::fd::AsRawFd;
-use std::os::linux::raw;
 use std::sync::mpsc;
 use std::thread::{self, sleep};
 use std::time::Duration;
@@ -387,20 +388,24 @@ impl Sock {
     }
 
     // Connects by any means necessary, not just TCP
-    pub fn connect(local_address: SocketAddr, remote_addresses: Vec<SocketAddr>, timeout: Duration) -> Option<Self> {
+    pub fn connect(local_address: Option<SocketAddr>, remote_addresses: Vec<SocketAddr>, timeout: Duration) -> Option<Self> {
         if remote_addresses.len() < 1 {
             return None;
         }
 
-        let should_use_nat = !local_address.ip().is_global();
+        let should_use_nat = match local_address{
+            Some(a) => !a.ip().is_global(),
+            None => true,
+        };
+
         let should_use_only_nat = false;
         
         let socket = if !should_use_nat {
-            Self::connect_method_tcp_simple(&local_address, &remote_addresses[0])
+            connect_method_tcp_simple(local_address.as_ref(), &remote_addresses[0])
         } else if should_use_only_nat {
-            Self::connect_method_rudp_and_tcp(&remote_addresses[0])
+            connect_method_rudp_and_tcp(&remote_addresses[0])
         } else {
-            Self::connect_method_all(&local_address, remote_addresses)
+            connect_method_all(local_address.as_ref(), remote_addresses)
         };
 
         let socket = match socket {
@@ -420,7 +425,10 @@ impl Sock {
                 socket: socket.as_raw_fd(), // Cedar should not use this directly,
                 is_listening: false,
                 is_ssl_secured: false,
-                local_port: local_address.port() as u32,
+                local_port: match local_address {
+                    Some(a) => a.port() as u32,
+                    None => 0
+                },
                 
                 // only_local:
                 // enable_conditional_accept: 
@@ -452,9 +460,49 @@ impl Sock {
 }
 
 // The 4 connection strategies
-impl Sock {
-    pub fn connect_method_tcp_simple(local: &SocketAddr, remote: &SocketAddr) -> Option<Socket> {
-        todo!()
+    pub fn connect_method_tcp_simple(local: Option<&SocketAddr>, remote: &SocketAddr) -> Option<Socket> {
+        let local = match local {
+            Some(s) => s,
+            None => { 
+                if remote.is_ipv4() {
+                    &SocketAddr::from((Ipv4Addr::UNSPECIFIED, 0))
+                } else {
+                    &SocketAddr::from((Ipv6Addr::UNSPECIFIED, 0))
+                }
+            }
+        };
+
+        if (local.is_ipv4() && remote.is_ipv6()) || (local.is_ipv6() && remote.is_ipv4()) {
+            println!("IP version mismatch, cannot connect between IPv4 and IPv6");
+            return None;
+        }
+
+        let socket = if local.is_ipv4() {
+            Socket::new(Domain::IPV4, Type::STREAM, None)
+        } else {
+            Socket::new(Domain::IPV6, Type::STREAM, None)
+        };
+
+        let socket = match socket {
+            Ok(x) => x,
+            Err(e) => {
+                println!("Failed to create a socket: {}", e);
+                return None;
+            }
+        };
+
+                let address: SocketAddr = "[::1]:12345".parse().unwrap();
+
+        if let Err(e) = socket.bind(&SockAddr::from(*local)) {
+            println!("Failed to bind socket to IP address:{} ", e);
+            return None;
+        }
+
+        if let Err(e) = socket.connect(&SockAddr::from(*remote)) {
+            println!("Failed to connect to remote: {}", e);
+        }
+        
+        Some(socket)
     }
 
     pub fn connect_method_rudp_and_tcp(remote: &SocketAddr) -> Option<Socket> {
@@ -469,24 +517,24 @@ impl Sock {
         todo!()
     }
 
-    pub fn connect_method_all(local_address: &SocketAddr, remote_addresses: Vec<SocketAddr>) -> Option<Socket> {
+    pub fn connect_method_all(local_address: Option<&SocketAddr>, remote_addresses: Vec<SocketAddr>) -> Option<Socket> {
         for address in remote_addresses {
-                thread::scope(|s| {
+            thread::scope(|s| {
                 let mut threads = Vec::new();
                 threads.push(s.spawn(|| {
-                    Self::connect_method_tcp_simple(local_address, &address)
+                    connect_method_tcp_simple(local_address, &address)
                 }));
 
                 threads.push(s.spawn(|| {
-                    Self::connect_method_rudp_and_tcp(&address)
+                    connect_method_rudp_and_tcp(&address)
                 }));
 
                 threads.push(s.spawn(|| {
-                    Self::connect_method_dns(&address)
+                    connect_method_dns(&address)
                 }));
 
                 threads.push(s.spawn(|| {
-                    Self::connect_method_icmp(&address)
+                    connect_method_icmp(&address)
                 }));
 
                 while !threads.iter().all(|t| { t.is_finished() }) {}
@@ -502,7 +550,6 @@ impl Sock {
 
         None
     }
-}
 
 // SOCK *NewUDP(UINTport)
 
@@ -640,26 +687,40 @@ pub extern "C" fn ConnectEx4(hostname: *mut c_char, port: u32, timeout: u32, sho
 
 // SOCK *BindConnectEx5(IP*localIP,UINTlocalport,char*hostname,UINTport,UINTtimeout,bool*cancel_flag,char*nat_t_svc_name,UINT*nat_t_error_code,booltry_start_ssl,boolno_get_hostname,SSL_VERIFY_OPTION*ssl_option,UINT*ssl_err,char*hint_str,IP*ret_ip)
 pub extern "C" fn BindConnectEx5(local_ip: *mut IP, local_port: u32, hostname: *mut c_char, remote_port: u32, timeout: u32, should_cancel: *mut bool, nat_table_svc_name: *mut c_char, nat_t_error_code: *mut u32, try_ssl: bool, no_get_hostname: bool, ssl_option: *mut SslVerifyOption, ssl_err: *mut u32, hint_str: *mut c_char, ret_ip: *mut IP) -> *mut Sock {
-    nullcheck!(null_mut(), hostname);
+    // We're going to ignore all the string passed in for now, because it seems like it doesn't matter much anyways
 
-    let local_ip = unsafe { &mut *local_ip };
-    let local_ip = match local_ip.to_ip() {
-        Some(ip) => ip,
-        None => { 
-            return null_mut() 
-        }
-    };
+    nullcheck!(null_mut(), hostname);
 
     let hostname = unsafe { match CStr::from_ptr(hostname).to_str() {
         Ok(s) => s,
         Err(_) => { return null_mut() }
     } };
-
-    let local_address = SocketAddr::from((local_ip, local_port as u16));
     
-    // We're going to ignore all the string passed in for now, because it seems like it doesn't matter much anyways
+    let local_ip = if local_ip.is_null() {
+        None
+    } else {
+        unsafe { Some(&mut *local_ip) }
+    };
 
-    return null_mut()
+    let local_ip = local_ip.map(|ip| { ip.to_ip() });
+    let local_address = local_ip.map(|ip| { SocketAddr::from((ip, local_port as u16))});
+
+    let remote_ips =  match resolve_all(hostname) {
+        Some(s) => s,
+        None => {
+            println!("Failed to resolve ip for {}", hostname);
+            return null_mut();
+        } 
+    };
+
+    let remote_addresses = remote_ips.into_iter().map(|ip| {
+        SocketAddr::from((ip, remote_port as u16))
+    }).collect();
+
+    match Sock::connect(local_address, remote_addresses, Duration::from_millis(500)) {
+        Some(s) => s.as_mut_ptr(),
+        None => null_mut()
+    }
 }
 
 // SOCK *Accept(SOCK*sock)
@@ -697,7 +758,10 @@ pub extern "C" fn StartSSLEx3(sock: *mut Sock, cert: *mut X, priv_key: *mut K, c
 
     let ssl = match Ssl::new(if sock.is_server { &SSL_CTX_SERVER } else { &SSL_CTX_CLIENT }) {
         Ok(s) => s,
-        Err(_) => return false,
+        Err(_) => {
+            println!("Failed to upgrade SSL");
+            return false
+        },
     };
 
     // Some SslContext options that are set in the original
