@@ -239,18 +239,18 @@ use crate::{
 };
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ReadBuf(buffer: *mut Buffer, out: *mut u8, size: usize) -> usize {
+pub extern "C" fn ReadBuf(buffer: *mut Buffer, out: *mut u8, size: u32) -> u32 {
     let buffer = unsafe { &mut *buffer };
 
     // SoftEther implementation writes 0's to the output buffer
     // Can be optimized to only zero unwritten portion, after read
     Zero(out, size);
 
-    let slice = buffer.read(size);
+    let slice = buffer.read(size as usize);
 
-    Copy(out, slice.as_mut_ptr(), slice.len());
+    Copy(out, slice.as_mut_ptr(), slice.len() as u32);
 
-    slice.len()
+    slice.len() as u32
 }
 
 #[unsafe(no_mangle)]

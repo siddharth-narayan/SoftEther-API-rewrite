@@ -6,6 +6,7 @@
 // void *Base64FromBin(UINT *out_size, const void *src, const UINT size);
 // void *Base64ToBin(UINT *out_size, const void *src, const UINT size);
 
+
 // UINT Uncompress(void *dst, UINT dst_size, void *src, UINT src_size);
 // UINT Compress(void *dst, UINT dst_size, void *src, UINT src_size);
 // UINT CompressEx(void *dst, UINT dst_size, void *src, UINT src_size, UINT level);
@@ -21,7 +22,18 @@
 
 // void XorData(void *dst, void *src1, void *src2, UINT size);
 
-use crate::nullcheck;
+use std::ptr::null_mut;
+
+use crate::{mem::mem::Free, nullcheck};
+
+// void FreeSafe(void **addr);
+#[unsafe(no_mangle)]
+extern "C" fn FreeSafe(addr: *mut *mut u8) {
+    unsafe { 
+        Free(*addr);
+        *addr = null_mut()
+    };
+}
 
 #[unsafe(no_mangle)]
 extern "C" fn XorData(destination: *mut u8, source_a: *mut u8, source_b: *mut u8, size: usize) {
