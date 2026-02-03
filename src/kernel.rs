@@ -1,4 +1,8 @@
-use std::{ffi::c_char, thread::{sleep, yield_now}, time::{self, Duration}};
+use std::{
+    ffi::c_char,
+    thread::{sleep, yield_now},
+    time::{self, Duration},
+};
 
 // void SleepThread(UINTtime)
 pub extern "C" fn SleepThread(time: u32) {
@@ -27,9 +31,7 @@ pub extern "C" fn SleepThread(time: u32) {
 // void GetTimeStrMilli64(char*str,UINTsize,UINT64sec64)
 // void GetDateTimeStrRFC3339(char*str,UINTsize,SYSTEMTIME*st,inttimezone_min)
 
-pub extern "C" fn GetDateTimeStrRFC3339(str: *const u8, size: u32, ) {
-
-}
+pub extern "C" fn GetDateTimeStrRFC3339(str: *const u8, size: u32) {}
 // bool Run(char*filename,char*arg,boolhide,boolwait)
 // void GetSpanStrMilli(char*str,UINTsize,UINT64sec64)
 // void GetMemInfo(MEMINFO*info)

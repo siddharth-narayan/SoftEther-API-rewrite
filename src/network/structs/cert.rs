@@ -1,8 +1,5 @@
 #[derive(Default)]
-pub struct X {
-    
-}
+pub struct X {}
 
 #[derive(Default)]
-pub struct K {    
-}
+pub struct K {}

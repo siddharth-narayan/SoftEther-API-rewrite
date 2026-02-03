@@ -8,7 +8,6 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 pub struct IP {
     address: [u8; 16],
     ipv6_scope_id: u32,
-
     // ip: IpAddr
 }
 
@@ -19,30 +18,35 @@ impl IP {
                 let mut addr = [0u8; 16];
                 addr[12..16].copy_from_slice(&u32::to_be_bytes(v4.to_bits()));
 
-                IP { address: addr, ipv6_scope_id: 0 }
-            },
-            IpAddr::V6(v6) => {
-                IP { address: u128::to_be_bytes(v6.to_bits()), ipv6_scope_id: 0 }
+                IP {
+                    address: addr,
+                    ipv6_scope_id: 0,
+                }
             }
+            IpAddr::V6(v6) => IP {
+                address: u128::to_be_bytes(v6.to_bits()),
+                ipv6_scope_id: 0,
+            },
         }
     }
 
     pub fn is_ipv4(&self) -> bool {
         for x in &self.address[0..10] {
-            if *x != 0 { return false; } // First 10 bytes must be 0
+            if *x != 0 {
+                return false;
+            } // First 10 bytes must be 0
         }
 
         if self.address[10..12] != [0xff, 0xff] {
             return false;
         }
 
-        return true
+        return true;
     }
 
     pub fn is_local(&self) -> bool {
         !self.to_ip().is_global()
     }
-
 
     pub fn to_ip(&self) -> IpAddr {
         if self.is_ipv4() {
@@ -55,7 +59,7 @@ impl IP {
     // TODO: Do we need Ipv6 here?
     pub fn to_ipv4(&self) -> Option<Ipv4Addr> {
         if !self.is_ipv4() {
-            return None
+            return None;
         }
 
         let slice = self.address[0..4].try_into().unwrap_or_default();
@@ -65,7 +69,7 @@ impl IP {
 
     pub fn to_ipv6(&self) -> Option<Ipv6Addr> {
         if self.is_ipv4() {
-            return None
+            return None;
         }
 
         let slice = self.address[0..4].try_into().unwrap_or_default();
@@ -73,10 +77,8 @@ impl IP {
         Some(Ipv6Addr::from_bits(u128::from_be_bytes(slice)))
     }
 
-
-
     fn is_ipv6(&self) -> bool {
-        return !self.is_ipv4()
+        return !self.is_ipv4();
     }
 }
 
@@ -120,16 +122,9 @@ pub extern "C" fn GetCurrentTimezone() -> i32 {
 // void UINTToIP(IP*ip,UINTvalue)
 // UINT IPToUINT(IP*ip)
 
-
-
 // bool SetTtl(SOCK*sock,UINTttl)
 
-
-
-
-
 // void SetNoNeedToRead(SOCK*sock)
-
 
 // void InitSockSet(SOCKSET*set)
 // void AddSockSet(SOCKSET*set,SOCK*sock)
@@ -140,7 +135,6 @@ pub extern "C" fn GetCurrentTimezone() -> i32 {
 // void SetWantToUseCipher(SOCK*sock,char*name)
 // void ClearSockDfBit(SOCK*s)
 // void SetRawSockHeaderIncludeOption(SOCK*s,boolenable)
-
 
 // void SetTimeout(SOCK*sock,UINTtimeout)
 // bool CheckTCPPort(char*hostname,UINTport)

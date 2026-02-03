@@ -5,23 +5,32 @@
 // UINT GetTableInt(char*name)
 // UINT GetCurrentLangId()
 
-use std::{cell::LazyCell, collections::HashMap, ffi::{CStr, CString, OsStr, c_char, c_schar, c_ushort}, fs::{File, read_to_string}, ptr::{null, null_mut}, sync::LazyLock};
+use std::{
+    cell::LazyCell,
+    collections::HashMap,
+    ffi::{CStr, CString, OsStr, c_char, c_schar, c_ushort},
+    fs::{File, read_to_string},
+    ptr::{null, null_mut},
+    sync::LazyLock,
+};
 
 pub static TABLE: LazyLock<Table> = LazyLock::new(load_table);
 
 #[repr(C)]
 struct TOKEN_LIST {
     token_count: u32,
-    tokens: *const *const c_char
+    tokens: *const *const c_char,
 }
 
 pub struct Table {
-    _inner: HashMap<String, String>
+    _inner: HashMap<String, String>,
 }
 
 impl Table {
     pub fn new() -> Self {
-        Table { _inner: HashMap::new() }
+        Table {
+            _inner: HashMap::new(),
+        }
     }
 
     pub fn print(&self) {
@@ -31,7 +40,7 @@ impl Table {
     }
 
     pub fn size(&self) -> usize {
-        self._inner.len()    
+        self._inner.len()
     }
 
     pub fn add(&mut self, k: String, v: String) {
@@ -46,11 +55,13 @@ impl Table {
 // This function loads a "table" which is a set of strings for debugging and showing to the user
 pub fn load_table() -> Table {
     let mut table = Table::new();
-    let content = read_to_string("strtable_en.stb").ok().unwrap_or(String::new());
-    
+    let content = read_to_string("strtable_en.stb")
+        .ok()
+        .unwrap_or(String::new());
+
     for mut line in content.lines() {
         line = line.trim_start();
-        
+
         if let Some(comment_idx) = line.find("#") {
             line = &line[..comment_idx]
         }
@@ -64,8 +75,7 @@ pub fn load_table() -> Table {
     table
 }
 
-pub extern "C" fn GetTableNameStartWith(str: *const c_char) {
-}
+pub extern "C" fn GetTableNameStartWith(str: *const c_char) {}
 
 // Mayaqua internal?
 pub extern "C" fn GetTableStr(name: *const c_char) -> *const u8 {

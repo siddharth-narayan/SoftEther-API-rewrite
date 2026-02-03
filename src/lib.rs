@@ -15,8 +15,8 @@ mod table;
 mod unix;
 mod win32;
 
-mod util;
 mod tests;
+mod util;
 
 fn main() {
     println!("Hello, world!");

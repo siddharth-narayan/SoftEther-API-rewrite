@@ -41,7 +41,7 @@ impl<T> Queue<T> {
             lock: null_mut(),
 
             _internal: VecDeque::new(),
-            _lock: Lock::new()
+            _lock: Lock::new(),
         }
     }
 

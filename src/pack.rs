@@ -1,33 +1,31 @@
-use std::{net::{Ipv4Addr, Ipv6Addr}, os::raw::c_void, ptr::null_mut};
+use std::{
+    net::{Ipv4Addr, Ipv6Addr},
+    os::raw::c_void,
+    ptr::null_mut,
+};
 
-use crate::mem::structs::buf::{Buffer};
-use crate::mem::structs::list::{List};
+use crate::mem::structs::buf::Buffer;
+use crate::mem::structs::list::List;
 
 static MAX_ELEMENT_NAME_LEN: usize = 64;
 
 // VALUE object
-struct PackInnerValue
-{
-	size: u32,
-	int_val: u32,
-	data: *mut c_void,
-	str: *const u8,
-	uni_str: *const u16,
-	u64_val: u64,
+struct PackInnerValue {
+    size: u32,
+    int_val: u32,
+    data: *mut c_void,
+    str: *const u8,
+    uni_str: *const u16,
+    u64_val: u64,
 }
 
-
-enum PackElementType {
-
-}
-
+enum PackElementType {}
 
 #[repr(C)]
-struct PackElement
-{
-	name: [u8; MAX_ELEMENT_NAME_LEN],
-	num_value: usize,
-	__type: u32,
+struct PackElement {
+    name: [u8; MAX_ELEMENT_NAME_LEN],
+    num_value: usize,
+    __type: u32,
     values_ptr: *const *mut PackInnerValue,
     json_is_array: bool,
     json_isbool: bool,
@@ -37,7 +35,7 @@ struct PackElement
 
     // Rust internals
     _type: PackElementType,
-    values: Vec<PackInnerValue>
+    values: Vec<PackInnerValue>,
 }
 
 impl PartialEq for PackElement {
@@ -46,9 +44,7 @@ impl PartialEq for PackElement {
     }
 }
 
-impl Eq for PackElement {
-    
-}
+impl Eq for PackElement {}
 
 impl PartialOrd for PackElement {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -72,9 +68,7 @@ impl Ord for PackElement {
 }
 
 impl PackElement {
-    fn into_bytes(self) {
-        
-    }
+    fn into_bytes(self) {}
 }
 
 #[repr(C)]
@@ -88,17 +82,17 @@ struct Pack {
 
 impl Pack {
     pub fn new() -> Self {
-        Self { 
+        Self {
             elements: null_mut(),
             json_subitem_names: null_mut(),
             json_groupname: [0; MAX_ELEMENT_NAME_LEN],
 
-            _internal: List::new() 
+            _internal: List::new(),
         }
     }
 
     pub fn as_mut_ptr(self) -> *mut Self {
-       Box::into_raw(Box::new(self))
+        Box::into_raw(Box::new(self))
     }
 
     pub fn free_mut_ptr(ptr: *mut Self) {
@@ -109,7 +103,7 @@ impl Pack {
         let mut out = Buffer::new();
 
         out.write_u32(self._internal.len() as u32);
-        
+
         for element in self._internal.into_iter() {
             element.into_bytes()
         }
@@ -117,7 +111,6 @@ impl Pack {
         out
     }
 }
-
 
 // PACK *NewPack()
 // ELEMENT *GetElement(PACK*p,char*name,UINTtype)

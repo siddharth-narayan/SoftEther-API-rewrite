@@ -1,2 +1,2 @@
-pub mod sock;
 pub mod cert;
+pub mod sock;

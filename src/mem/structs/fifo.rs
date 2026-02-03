@@ -3,7 +3,7 @@ use std::os::raw::c_void;
 use std::ptr::null_mut;
 
 use crate::mem::structs::buf::Buffer;
-use crate::object::{RefCounter, Lock};
+use crate::object::{Lock, RefCounter};
 use crate::util::RawPtr;
 
 pub struct Fifo<T> {

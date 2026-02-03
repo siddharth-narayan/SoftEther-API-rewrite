@@ -106,7 +106,7 @@ enum SockType {
 use crate::dns::{
     resolve, resolve_all, resolve_all_ipv4, resolve_all_ipv6, resolve_ipv4, resolve_ipv6,
 };
-use crate::network::ssl::{SslUpgradable, SslVerifyOption, SSL_CTX_CLIENT, SSL_CTX_SERVER};
+use crate::network::ssl::{SSL_CTX_CLIENT, SSL_CTX_SERVER, SslUpgradable, SslVerifyOption};
 use crate::network::structs::sock;
 use crate::nullcheck;
 use crate::{mem::structs::list::List, network::ssl::create_client_ctx};

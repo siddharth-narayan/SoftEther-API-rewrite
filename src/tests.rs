@@ -1,7 +1,9 @@
 use std::ffi::c_void;
 
-use crate::{mem::structs::list::FfiCompareFunction, table::{self, load_table}};
-
+use crate::{
+    mem::structs::list::FfiCompareFunction,
+    table::{self, load_table},
+};
 
 #[test]
 fn table_loaded() {
@@ -15,7 +17,7 @@ fn table_loaded() {
 #[test]
 fn ptr_cast_to_fn_ok() {
     assert_eq!(
-    size_of::<Option<FfiCompareFunction>>(),
-    size_of::<*const c_void>()
-);
+        size_of::<Option<FfiCompareFunction>>(),
+        size_of::<*const c_void>()
+    );
 }

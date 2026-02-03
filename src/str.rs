@@ -4,7 +4,7 @@ pub fn url_decode(url: &CStr) -> String {
     let string = url.to_str().unwrap();
 
     let mut str_iter = string.as_bytes().iter();
-	
+
     let mut final_string = String::new();
 
     while let Some(char) = str_iter.next() {
@@ -14,7 +14,7 @@ pub fn url_decode(url: &CStr) -> String {
             let c = u8::from_str_radix(format!("{}{}", hex[0], hex[1]).as_str(), 16).unwrap();
 
             let c = c as char;
-            
+
             final_string.extend(std::iter::once(c));
         }
 
@@ -22,7 +22,7 @@ pub fn url_decode(url: &CStr) -> String {
             final_string.extend(std::iter::once(' '));
         }
     }
-    
+
     final_string
 }
 
