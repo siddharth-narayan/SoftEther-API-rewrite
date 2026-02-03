@@ -13,7 +13,7 @@ pub struct IP {
 }
 
 impl IP {
-    fn from_ip(addr: IpAddr) -> IP {
+    pub fn from_ip(addr: IpAddr) -> IP {
         match addr {
             IpAddr::V4(v4) => {
                 let mut addr = [0u8; 16];
