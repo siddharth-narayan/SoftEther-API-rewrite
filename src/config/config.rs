@@ -1,3 +1,35 @@
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub struct Config {
+    save_password: bool,
+    encrypted_password: String,
+    remote_password_only: bool,
+    user_agent: String,
+    secure_device_id: u32,
+
+    AccountList: Vec<Account>
+}
+
+pub struct Account {
+    add_default_ca: bool,
+    check_server_cert: bool,
+
+    auth: ClientAuthSettings
+}
+
+pub struct ClientAuthSettings {
+    auth_type: u32,
+    encrypted_password: String,
+    username: String,
+}
+
+pub fn get() {
+    toml::from_str(r#"
+        ip = '127.0.0.1'
+    "#);
+}
+
 // void CfgDeleteFolder(FOLDER*f)
 // FOLDER *CfgCreateFolder(FOLDER*parent,char*name)
 // TOKEN_LIST *CfgEnumFolderToTokenList(FOLDER*f)
@@ -33,3 +65,4 @@
 // ITEM *CfgAddIp6Addr(FOLDER*f,char*name,IPV6_ADDR*addr)
 // bool CfgGetIp(FOLDER*f,char*name,structIP*ip)
 // ITEM *CfgAddIp(FOLDER*f,char*name,structIP*ip)
+

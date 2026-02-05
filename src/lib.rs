@@ -18,6 +18,4 @@ mod win32;
 mod tests;
 mod util;
 
-fn main() {
-    println!("Hello, world!");
-}
+
