@@ -1,5 +1,17 @@
 use std::ffi::{CStr, CString, c_char};
 
+use widestring::{U16CStr, WideCStr};
+
+pub unsafe fn clone_from_c_str(ptr: *const c_char) -> String {
+    let str = unsafe { CStr::from_ptr(ptr) };
+    str.to_string_lossy().to_string()
+}
+
+pub unsafe fn clone_from_uni_str(ptr: *const u16) -> String {
+    let str = unsafe { U16CStr::from_ptr_str(ptr) };
+    str.to_string_lossy()
+}
+
 pub fn url_decode(url: &CStr) -> String {
     let string = url.to_str().unwrap();
 
