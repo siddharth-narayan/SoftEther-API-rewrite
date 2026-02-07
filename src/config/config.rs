@@ -3,23 +3,37 @@ use toml::{Table, Value};
 
 use crate::{config::structure::Config, mem::structs::list::List, nullcheck, str::{clone_from_c_str, clone_from_uni_str}};
 
+// Either a Folder or a Value
+enum GenericItem {
+    Folder(Folder),
+    Item(Item),
+}
+
 pub struct Folder {
     name: *mut c_char,
     items: *mut List<*mut Item>,
     folders: *mut List<*mut Folder>,
     parent: *mut Folder,
 
-    _internal: toml::map::Map<String, Item>,
+    _internal: toml::map::Map<String, GenericItem>,
 }
 
 impl Folder {
-    pub fn insert(&mut self, key: String, value: Item) {
+    pub fn new(table: toml::map::Map<String, Value>) {
+
+    }
+
+    pub fn insert(&mut self, key: String, value: GenericItem) {
         // let item = Item::new(value);
         self._internal.insert(key, value);
     }
 
-    pub fn get(&mut self, key: String) -> Option<&Item> {
+    pub fn get(&mut self, key: String) -> Option<&GenericItem> {
         self._internal.get(&key)
+    }
+
+    pub fn get_mut(&mut self, key: String) -> Option<&mut GenericItem> {
+        self._internal.get_mut(&key)
     }
 }
 
@@ -90,6 +104,24 @@ pub fn get() {
     // Prints "vaaaaalue"
 }
 
+fn CfgAdd<'a>(folder: *mut Folder, key: *mut c_char, value: Value) {
+    nullcheck!((), folder, value);
+  
+    let folder = unsafe { &mut *folder };
+    let key = unsafe { clone_from_c_str(key) };
+    
+    let item = Item::new(value);
+
+    let _ = folder.insert(key, GenericItem::Item(item));
+}
+
+fn CfgGet<'a>(folder: *mut Folder, name: *mut c_char) -> Option<&'a mut GenericItem> {
+    let folder = unsafe { &mut *folder };
+    let name = unsafe { clone_from_c_str(name) };
+
+    folder.get_mut(name)
+}
+
 // Just frees?
 // void CfgDeleteFolder(FOLDER*f)
 
@@ -121,7 +153,7 @@ pub extern "C" fn CfgAddUniStr(f: *mut Folder, key: *mut c_char, value: *mut u16
     
     let item = Item::new(value);
 
-    let _ = folder.insert(key, item);
+    let _ = folder.insert(key, GenericItem::Item(item));
 
     todo!()
 }
@@ -133,32 +165,94 @@ pub extern "C" fn CfgGetFolder(parent: *mut Folder, name: *mut c_char) -> *mut F
     let parent = unsafe { &mut *parent };
     let name = unsafe { clone_from_c_str(name) };
 
-    let table = match parent._internal.get(&name) {
-        Some(s) => match &s._internal {
-            Value::Table(t) => t,
-            _ => {
-                return null_mut();
-            }
+    match parent._internal.get_mut(&name) {
+        Some(s) => match s {
+            GenericItem::Folder(t) => t,
+            _ =>  null_mut(),
         },
         None => {
-            return null_mut();
+            null_mut()
         },
-    };
-
-
-    
-    todo!()
-
+    }
 }
 
 // UINT CfgGetInt(FOLDER*f,char*name)
+pub extern "C" fn CfgGetInt(parent: *mut Folder, name: *mut c_char) -> u32 {
+    nullcheck!(0, parent, name);
 
+    let parent = unsafe { &mut *parent };
+    let name = unsafe { clone_from_c_str(name) };
+
+    let number = match parent._internal.get_mut(&name) {
+        Some(s) => match s {
+            GenericItem::Item(t) => match t._internal {
+                Value::Integer(i) => i,
+                _ => 0,
+            },
+            _ =>  0,
+        },
+        None => {
+            0
+        },
+    };
+
+    match u32::try_from(number) {
+        Ok(i) => i,
+        Err(_) => 0,
+    }
+}
 
 // bool CfgGetBool(FOLDER*f,char*name)
+pub extern "C" fn CfgGetBool(parent: *mut Folder, name: *mut c_char) -> bool {
+    nullcheck!(false, parent, name);
+
+    let parent = unsafe { &mut *parent };
+    let name = unsafe { clone_from_c_str(name) };
+
+    match parent._internal.get_mut(&name) {
+        Some(s) => match s {
+            GenericItem::Item(t) => match t._internal {
+                Value::Boolean(b) => b,
+                _ => false,
+            },
+            _ =>  false,
+        },
+        None => {
+            false
+        },
+    }
+}
 
 // UINT64 CfgGetInt64(FOLDER*f,char*name)
+pub extern "C" fn CfgGetInt64(parent: *mut Folder, name: *mut c_char) -> u64 {
+    nullcheck!(0, parent, name);
+
+    let parent = unsafe { &mut *parent };
+    let name = unsafe { clone_from_c_str(name) };
+
+    let number = match parent._internal.get_mut(&name) {
+        Some(s) => match s {
+            GenericItem::Item(t) => match t._internal {
+                Value::Integer(b) => b,
+                _ => 0,
+            },
+            _ =>  0,
+        },
+        None => {
+            0
+        },
+    };
+
+    match u64::try_from(number) {
+        Ok(v) => v,
+        Err(_) => 0
+    }
+}
 
 // UINT CfgGetByte(FOLDER*f,char*name,void*buf,UINTsize)
+pub extern "C" fn CfgGetBytes(folder: *mut Folder, name: *mut c_char, buf: *mut u8, size: u32) {
+
+}
 
 // BUF *CfgGetBuf(FOLDER*f,char*name)
 
