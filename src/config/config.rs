@@ -1,7 +1,7 @@
-use std::{ffi::c_char, os::raw::c_void, ptr::null_mut, str::FromStr};
+use std::{ffi::c_char, os::raw::c_void, ptr::{self, null_mut, slice_from_raw_parts}, slice::from_raw_parts, str::FromStr};
 use toml::{Table, Value};
 
-use crate::{config::structure::Config, mem::structs::list::List, nullcheck, str::{clone_from_c_str, clone_from_uni_str}};
+use crate::{config::structure::Config, mem::structs::list::List, nullcheck, str::{clone_from_c_str, clone_from_uni_str, into_c_str}};
 
 // Either a Folder or a Value
 enum GenericItem {
@@ -83,8 +83,6 @@ impl Item {
     }
 }
 
-
-// SoftEther "Folder"is toml Table
 pub fn get() {
     let str = r#"
         key = "vaaaaalue"
@@ -104,15 +102,18 @@ pub fn get() {
     // Prints "vaaaaalue"
 }
 
-fn CfgAdd<'a>(folder: *mut Folder, key: *mut c_char, value: Value) {
-    nullcheck!((), folder, value);
+fn CfgAdd(folder: *mut Folder, key: *mut c_char, value: Value) -> *mut Item {
+    nullcheck!(null_mut(), folder, value);
   
     let folder = unsafe { &mut *folder };
     let key = unsafe { clone_from_c_str(key) };
     
     let item = Item::new(value);
+    let item_ptr = (&mut item) as *mut Item;
 
     let _ = folder.insert(key, GenericItem::Item(item));
+
+    item_ptr
 }
 
 fn CfgGet<'a>(folder: *mut Folder, name: *mut c_char) -> Option<&'a mut GenericItem> {
@@ -132,30 +133,50 @@ fn CfgGet<'a>(folder: *mut Folder, name: *mut c_char) -> Option<&'a mut GenericI
 // TOKEN_LIST *CfgEnumItemToTokenList(FOLDER*f)
 
 // ITEM *CfgAddInt(FOLDER*f,char*name,UINTi)
+pub extern "C" fn CfgAddInt(folder: *mut Folder, name: *mut c_char, i: u32) -> *mut Item {
+    nullcheck!(null_mut(), folder, name);
+
+    CfgAdd(folder, name, Value::Integer(i.into()))
+}
 
 // ITEM *CfgAddBool(FOLDER*f,char*name,boolb)
+pub extern "C" fn CfgAddBool(folder: *mut Folder, name: *mut c_char, b: bool) -> *mut Item {
+    nullcheck!(null_mut(), folder, name);
+
+    CfgAdd(folder, name, Value::Boolean(b))
+}
 
 // ITEM *CfgAddInt64(FOLDER*f,char*name,UINT64i)
+pub extern "C" fn CfgAddInt64(folder: *mut Folder, name: *mut c_char, i: u64) -> *mut Item {
+    nullcheck!(null_mut(), folder, name);
+
+    let int: i64 = match i.try_into() {
+        Ok(n) => n,
+        Err(_) => 0
+    };
+
+    CfgAdd(folder, name, Value::Integer(int))
+}
 
 // ITEM *CfgAddByte(FOLDER*f,char*name,void*buf,UINTsize)
 
 // ITEM *CfgAddBuf(FOLDER*f,char*name,BUF*b)
 
 // ITEM *CfgAddStr(FOLDER*f,char*name,char*str)
+pub extern "C" fn CfgAddStr(folder: *mut Folder, name: *mut c_char, string: *mut c_char) -> *mut Item {
+    nullcheck!(null_mut(), folder, name, string);
+
+    let string = unsafe { clone_from_c_str(string) };
+    CfgAdd(folder, name, Value::String(string))
+}
 
 // ITEM *CfgAddUniStr(FOLDER*f,char*name,wchar_t*str)
-pub extern "C" fn CfgAddUniStr(f: *mut Folder, key: *mut c_char, value: *mut u16) -> *mut Item {
-    nullcheck!(null_mut(), f, key, value);
+pub extern "C" fn CfgAddUniStr(folder: *mut Folder, key: *mut c_char, value: *mut u16) -> *mut Item {
+    nullcheck!(null_mut(), folder, key, value);
 
-    let folder = unsafe { &mut *f };
-    let key = unsafe { clone_from_c_str(key) };
     let value = toml::Value::String(unsafe { clone_from_uni_str(value) });
     
-    let item = Item::new(value);
-
-    let _ = folder.insert(key, GenericItem::Item(item));
-
-    todo!()
+    CfgAdd(folder, key, value)
 }
 
 // FOLDER *CfgGetFolder(FOLDER*parent,char*name)
@@ -257,10 +278,57 @@ pub extern "C" fn CfgGetBytes(folder: *mut Folder, name: *mut c_char, buf: *mut 
 // BUF *CfgGetBuf(FOLDER*f,char*name)
 
 // bool CfgGetStr(FOLDER*f,char*name,char*str,UINTsize)
+pub extern "C" fn CfgGetStr(folder: *mut Folder, name: *mut c_char, dst: *mut u8, size: u32) -> *mut Item {
+    nullcheck!(null_mut(), folder, name, dst);
+
+    let item = match CfgGet(folder, name) {
+        Some(s) => {
+            match s {
+                GenericItem::Item(i) => i,
+                _ => {
+                    return null_mut()
+                }
+            }
+        },
+        None => {
+            return {
+                null_mut()
+            }  
+        }
+    };
+
+    let item_ptr: *mut Item = item;
+
+    let string_bytes = match item._internal {
+        Value::String(s) => s.as_bytes_mut(),
+        _ => {
+            return null_mut()
+        }
+    };
+
+
+    let dst= unsafe { std::slice::from_raw_parts_mut(dst, size as usize) };
+    dst.copy_from_slice(&string_bytes[0..dst.len()]);
+
+    todo!()
+}
 
 // bool CfgGetUniStr(FOLDER*f,char*name,wchar_t*str,UINTsize)
 
 // bool CfgIsItem(FOLDER*f,char*name)
+pub extern "C" fn CfgIsItem(folder: *mut Folder, name: *mut c_char) -> bool {
+    nullcheck!(false, folder, name);
+
+    match CfgGet(folder, name) {
+        Some(s) => {
+            match s {
+                GenericItem::Folder(_) => false,
+                GenericItem::Item(_) => true,
+            }
+        },
+        None => false
+    }
+}
 
 // BUF *CfgFolderToBuf(FOLDER*f,booltextmode)
 

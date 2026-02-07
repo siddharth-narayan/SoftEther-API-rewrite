@@ -1,6 +1,18 @@
-use std::ffi::{CStr, CString, c_char};
+use std::{ffi::{CStr, CString, c_char}, ptr::null_mut, str::FromStr};
 
 use widestring::{U16CStr, WideCStr};
+
+pub fn into_c_str(mut s: String) -> *const i8 {
+    let mut s = match CString::new(s) {
+        Ok(x) => x,
+        _ => {
+            return null_mut()
+        }
+    };
+
+    s.into_raw()
+
+}
 
 pub unsafe fn clone_from_c_str(ptr: *const c_char) -> String {
     let str = unsafe { CStr::from_ptr(ptr) };
