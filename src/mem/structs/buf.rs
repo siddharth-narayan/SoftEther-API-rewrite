@@ -41,6 +41,7 @@ use std::{
 
 // Keep C struct members, but add the *actual* members for rust after that
 #[repr(C)]
+#[derive(Clone)]
 pub struct Buffer {
     buf_ptr: *mut u8,
     size: u32,

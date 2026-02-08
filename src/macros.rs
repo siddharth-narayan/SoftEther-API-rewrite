@@ -37,3 +37,15 @@ macro_rules! nullcheck {
         )+
     };
 }
+
+// Credit: https://users.rust-lang.org/t/extern-c-as-a-block/36626/3
+#[macro_export]
+macro_rules! c_export {
+    ($( $(#[$meta:meta])* fn $name:ident ($($arg:ident: $arg_type:ty),*) $(-> $rtn_type:ty)? $body:block )*) => {
+        $(
+            $(#[$meta])*
+            #[unsafe(no_mangle)]
+            pub extern "C" fn $name($($arg: $arg_type),*) $(-> $rtn_type)? $body
+        )*
+    }
+}

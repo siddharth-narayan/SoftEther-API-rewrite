@@ -103,12 +103,12 @@ pub fn get() {
 }
 
 fn CfgAdd(folder: *mut Folder, key: *mut c_char, value: Value) -> *mut Item {
-    nullcheck!(null_mut(), folder, value);
+    nullcheck!(null_mut(), folder, key);
   
     let folder = unsafe { &mut *folder };
     let key = unsafe { clone_from_c_str(key) };
     
-    let item = Item::new(value);
+    let mut item = Item::new(value);
     let item_ptr = (&mut item) as *mut Item;
 
     let _ = folder.insert(key, GenericItem::Item(item));
@@ -299,8 +299,11 @@ pub extern "C" fn CfgGetStr(folder: *mut Folder, name: *mut c_char, dst: *mut u8
 
     let item_ptr: *mut Item = item;
 
-    let string_bytes = match item._internal {
-        Value::String(s) => s.as_bytes_mut(),
+    let string_bytes = match &mut item._internal {
+        Value::String(s) => unsafe { 
+            let new = s.clone();
+            new.into_bytes()
+        },
         _ => {
             return null_mut()
         }
@@ -310,6 +313,7 @@ pub extern "C" fn CfgGetStr(folder: *mut Folder, name: *mut c_char, dst: *mut u8
     let dst= unsafe { std::slice::from_raw_parts_mut(dst, size as usize) };
     dst.copy_from_slice(&string_bytes[0..dst.len()]);
 
+    // Don't use copy_from_slice because it panics
     todo!()
 }
 

@@ -1,0 +1,1 @@
+PACK is the fundamental unit of information that SoftEtherVPN uses to communicate. (As far as I know), it is used in IPC between a vpncmd and vpnserver, as well as communication in the SoftEtherVPN protocol

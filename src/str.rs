@@ -2,6 +2,8 @@ use std::{ffi::{CStr, CString, c_char}, ptr::null_mut, str::FromStr};
 
 use widestring::{U16CStr, WideCStr};
 
+use crate::util::RawCStr;
+
 pub fn into_c_str(mut s: String) -> *const i8 {
     let mut s = match CString::new(s) {
         Ok(x) => x,
@@ -12,6 +14,14 @@ pub fn into_c_str(mut s: String) -> *const i8 {
 
     s.into_raw()
 
+}
+
+pub unsafe fn ref_from_c_str<'a>(ptr: *const c_char) -> &'a str {
+    let str = unsafe { CStr::from_ptr(ptr) };
+    match str.to_str() {
+        Ok(s) => s,
+        Err(_) => ""
+    }
 }
 
 pub unsafe fn clone_from_c_str(ptr: *const c_char) -> String {

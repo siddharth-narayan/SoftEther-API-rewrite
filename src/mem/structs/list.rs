@@ -1,14 +1,15 @@
-use std::{cmp::Ordering, ffi::c_void, ptr::null_mut, vec::IntoIter};
+use std::{cmp::Ordering, ffi::c_void, ptr::null_mut, slice::{Iter, IterMut}, sync::Arc, vec::IntoIter};
 
 use crate::{
     object::{Lock, RefCounter},
     util::RawPtr,
 };
 
-type CompareFunction<T> = Box<dyn for<'a, 'b> Fn(&'a T, &'b T) -> Ordering>;
+type CompareFunction<T> = Arc<dyn Fn(&T, &T) -> Ordering>;
 pub type FfiCompareFunction = extern "C" fn(*const c_void, *const c_void) -> i32;
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct List<T> {
     ref_count: *mut RefCounter,
     num_items: u32,
@@ -37,14 +38,14 @@ impl<T: Ord> List<T> {
 
             sorted: true,
             items: Vec::new(),
-            compare_function: Box::new(|item_1: &T, item_2: &T| item_1.cmp(item_2)),
+            compare_function: Arc::new(|item_1: &T, item_2: &T| item_1.cmp(item_2)),
         }
     }
 }
 
 impl<T> List<T> {
     pub fn new_with_ffi_cmp(compare: FfiCompareFunction) -> List<T> {
-        let rustified_compare_func = Box::new(move |item_1: &T, item_2: &T| {
+        let rustified_compare_func = Arc::new(move |item_1: &T, item_2: &T| {
             let (item_1, item_2) = (item_1 as *const T, item_2 as *const T);
             let (item_1, item_2) = (item_1 as *const c_void, item_2 as *const c_void);
 
@@ -86,6 +87,14 @@ impl<T> List<T> {
         return self.items.len();
     }
 
+    pub fn iter(&self) -> Iter<T> {
+        self.items.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> IterMut<T> {
+        self.items.iter_mut()
+    }
+
     pub fn into_iter(self) -> IntoIter<T> {
         self.items.into_iter()
     }
@@ -103,7 +112,7 @@ impl<T> List<T> {
     }
 
     pub fn sort(&mut self) {
-        self.items.sort_unstable_by(&self.compare_function)
+        self.items.sort_unstable_by(self.compare_function.as_ref())
     }
 
     pub fn search(&self, item: &T) -> Option<usize> {

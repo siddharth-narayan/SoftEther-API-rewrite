@@ -1,6 +1,7 @@
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void};
 
 pub type RawPtr = *mut c_void;
+pub type RawCStr = *mut c_char;
 
 pub trait CCompat {
     fn c_compat(&mut self);
