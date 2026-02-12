@@ -38,6 +38,14 @@ impl PackInnerValue {
     pub fn u64(&self) -> u64 {
         0
     }
+
+    pub fn bool(&self) -> bool {
+        false
+    }
+
+    pub fn buf(&mut self) -> &mut Buffer {
+        todo!()
+    }
 }
 
 #[derive(Clone)]

@@ -1,8 +1,10 @@
-use std::ffi::c_char;
+use std::ffi::{CString, c_char, c_void};
 use std::net::IpAddr;
 use std::ptr::null_mut;
 
-use crate::c_export;
+use widestring::U16CString;
+
+use crate::{c_export, nullcheck};
 
 use crate::mem::structs::buf::Buffer;
 use crate::mem::structs::list::List;
@@ -10,7 +12,7 @@ use crate::network::structs::cert::{K, X};
 use crate::network::util::IP;
 use crate::pack::pack::{Pack, PackElement, PackInnerValue};
 use crate::str::clone_from_c_str;
-use crate::util::{RawCStr, RawPtr};
+use crate::util::{RawCStr, RawPtr, copy_slice_to_slice};
 
 c_export! {
     // PACK *NewPack()
@@ -27,8 +29,7 @@ c_export! {
     fn PackToBuf(ptr: *mut Pack) -> *mut Buffer {
         let pack = unsafe { &mut *ptr };
 
-        pack.clone().to_buf().as_mut_ptr();
-        todo!()
+        pack.clone().to_buf().as_mut_ptr()
     }
 
     // PACK *BufToPack(BUF*b)
@@ -74,6 +75,8 @@ fn PackGetElement<'a>(ptr: *mut Pack, name: *mut c_char) -> Option<&'a mut PackE
 // c_export! {
     // ELEMENT *GetElement(PACK*p,char*name,UINTtype)
     fn GetElement(ptr: *mut Pack, name: RawCStr) -> *mut PackElement {
+        nullcheck!(null_mut(), ptr, name);
+
         match PackGetElement(ptr, name) {
             Some(s) => s,
             None => null_mut()
@@ -82,12 +85,16 @@ fn PackGetElement<'a>(ptr: *mut Pack, name: *mut c_char) -> Option<&'a mut PackE
 
     // UINT PackGetStrSize(PACK*p,char*name)
     fn PackGetStrSize(ptr: *mut Pack, name: RawCStr) -> u32 {
+        nullcheck!(0, ptr, name);
+
         PackGetStrSizeEx(ptr, name, 0)
     }
 
 
     // UINT PackGetStrSizeEx(PACK*p,char*name,UINTindex)
     fn PackGetStrSizeEx(ptr: *mut Pack, name: *mut c_char, index: u32) -> u32 {
+        nullcheck!(0, ptr, name);
+
         let value = match PackGetValueEx(ptr, name, index as usize) {
             Some(p) => p,
             None => {
@@ -99,143 +106,252 @@ fn PackGetElement<'a>(ptr: *mut Pack, name: *mut c_char) -> Option<&'a mut PackE
     }
 
 // bool PackGetStr(PACK*p,char*name,char*str,UINTsize)
-pub fn PackGetStr(p: *mut Pack, name: *mut c_char, str_: *mut c_char, size: u32) -> bool {
-    todo!()
+pub fn PackGetStr(ptr: *mut Pack, name: *mut c_char, str_: *mut u8, size: u32) -> bool {
+    nullcheck!(false, ptr, name, str_);
+
+    PackGetStrEx(ptr, name, str_, size, 0)
 }
 
 // bool PackGetStrEx(PACK*p,char*name,char*str,UINTsize,UINTindex)
-pub fn PackGetStrEx(p: *mut Pack, name: *mut c_char, str_: *mut c_char, size: u32, index: u32) -> bool {
-    todo!()
+pub fn PackGetStrEx(ptr: *mut Pack, name: *mut c_char, str_: *mut u8, size: u32, index: u32) -> bool {
+    nullcheck!(false, ptr, name, str_);
+
+    let value = match PackGetValueEx(ptr, name, index as usize) {
+        Some(p) => p,
+        None => {
+            return false;
+        }
+    };
+
+    let dst_str: &mut [u8] = unsafe { std::slice::from_raw_parts_mut(str_, size as usize) };
+    
+    match CString::new(value.str()) {
+        Ok(src_str) => {
+            copy_slice_to_slice(dst_str, src_str.as_bytes_with_nul(), size as usize);
+            true
+        },
+        Err(_) => {
+            false
+        }
+    }
 }
 
 // bool PackGetUniStr(PACK*p,char*name,wchar_t*unistr,UINTsize)
-pub fn PackGetUniStr(p: *mut Pack, name: *mut c_char, unistr: *mut u16, size: u32) -> bool {
-    todo!()
+pub fn PackGetUniStr(ptr: *mut Pack, name: *mut c_char, unistr: *mut u16, size: u32) -> bool {
+    nullcheck!(false, ptr, name, unistr);
+
+    PackGetUniStrEx(ptr, name, unistr, size, 0)
 }
 
 // bool PackGetUniStrEx(PACK*p,char*name,wchar_t*unistr,UINTsize,UINTindex)
-pub fn PackGetUniStrEx(p: *mut Pack, name: *mut c_char, unistr: *mut u16, size: u32, index: u32) -> bool {
-    todo!()
+pub fn PackGetUniStrEx(ptr: *mut Pack, name: *mut c_char, unistr: *mut u16, size: u32, index: u32) -> bool {
+    nullcheck!(false, ptr, name, unistr);
+
+    let value = match PackGetValueEx(ptr, name, index as usize) {
+        Some(p) => p,
+        None => {
+            return false;
+        }
+    };
+
+    let dst_str: &mut [u16] = unsafe { std::slice::from_raw_parts_mut(unistr, size as usize) };
+    
+    match U16CString::from_str(value.str()) {
+        Ok(src_str) => {
+            copy_slice_to_slice(dst_str, src_str.as_slice_with_nul(), size as usize);
+            true
+        },
+        Err(_) => {
+            false
+        }
+    }
 }
 
 // UINT PackGetIndexCount(PACK*p,char*name)
-pub fn PackGetIndexCount(p: *mut Pack, name: *mut c_char) -> u32 {
-    todo!()
-}
+pub fn PackGetIndexCount(ptr: *mut Pack, name: *mut c_char) -> u32 {
+    nullcheck!(0, ptr, name);
 
-// UINT PackGetInt(PACK*p,char*name)
-pub fn PackGetInt(p: *mut Pack, name: *mut c_char) -> u32 {
     todo!()
 }
 
 // UINT PackGetNum(PACK*p,char*name)
-pub fn PackGetNum(p: *mut Pack, name: *mut c_char) -> u32 {
-    todo!()
+// Returns a number <= 65536 for some reason
+// Takes up more than 2 bytes anyways?
+pub fn PackGetNum(ptr: *mut Pack, name: *mut c_char) -> u32 {
+    nullcheck!(0, ptr, name);
+
+    u32::min(PackGetInt(ptr, name), 65536)
+}
+
+// UINT PackGetInt(PACK*p,char*name)
+pub fn PackGetInt(ptr: *mut Pack, name: *mut c_char) -> u32 {
+    nullcheck!(0, ptr, name);
+
+    PackGetIntEx(ptr, name, 0)
 }
 
 // UINT PackGetIntEx(PACK*p,char*name,UINTindex)
-pub fn PackGetIntEx(p: *mut Pack, name: *mut c_char, index: u32) -> u32 {
-    todo!()
+pub fn PackGetIntEx(ptr: *mut Pack, name: *mut c_char, index: u32) -> u32 {
+    nullcheck!(0, ptr, name);
+
+    let val = match PackGetValueEx(ptr, name, index as usize) {
+        Some(i) => i.u64(),
+        None => 0
+    };
+
+    match val.try_into() {
+        Ok(i) => i,
+        Err(_) => 0
+    } 
 }
 
 // UINT64 PackGetInt64(PACK*p,char*name)
-pub fn PackGetInt64(p: *mut Pack, name: *mut c_char) -> u64 {
-    todo!()
+pub fn PackGetInt64(ptr: *mut Pack, name: *mut c_char) -> u64 {
+    nullcheck!(0, ptr, name);
+
+    PackGetInt64Ex(ptr, name, 0)
 }
 
 // UINT64 PackGetInt64Ex(PACK*p,char*name,UINTindex)
-pub fn PackGetInt64Ex(p: *mut Pack, name: *mut c_char, index: u32) -> u64 {
-    todo!()
+pub fn PackGetInt64Ex(ptr: *mut Pack, name: *mut c_char, index: u32) -> u64 {
+    nullcheck!(0, ptr, name);
+
+    let val = match PackGetValueEx(ptr, name, index as usize) {
+        Some(i) => i.u64(),
+        None => 0
+    };
+
+    match val.try_into() {
+        Ok(i) => i,
+        Err(_) => 0
+    } 
 }
 
-// UINT PackGetDataSizeEx(PACK*p,char*name,UINTindex)
-pub fn PackGetDataSizeEx(p: *mut Pack, name: *mut c_char, index: u32) -> u32 {
+// bool PackGetData(PACK*p,char*name,void*data)
+pub fn PackGetData(ptr: *mut Pack, name: *mut c_char, data: *mut core::ffi::c_void) -> bool {
+    nullcheck!(false, ptr, name, data);
+
     todo!()
 }
 
 // UINT PackGetDataSize(PACK*p,char*name)
-pub fn PackGetDataSize(p: *mut Pack, name: *mut c_char) -> u32 {
-    todo!()
+pub fn PackGetDataSize(ptr: *mut Pack, name: *mut c_char) -> u32 {
+    nullcheck!(0, ptr, name);
+
+    PackGetDataSizeEx(ptr, name, 0)
 }
 
-// bool PackGetData(PACK*p,char*name,void*data)
-pub fn PackGetData(p: *mut Pack, name: *mut c_char, data: *mut core::ffi::c_void) -> bool {
+// UINT PackGetDataSizeEx(PACK*p,char*name,UINTindex)
+pub fn PackGetDataSizeEx(ptr: *mut Pack, name: *mut c_char, index: u32) -> u32 {
+    nullcheck!(0, ptr, name);
+
     todo!()
 }
 
 // BUF *PackGetBuf(PACK*p,char*name)
-pub fn PackGetBuf(p: *mut Pack, name: *mut c_char) -> *mut Buffer {
-    todo!()
+pub fn PackGetBuf(ptr: *mut Pack, name: *mut c_char) -> *mut Buffer {
+    nullcheck!(null_mut(), ptr, name);
+
+    PackGetBufEx(ptr, name, 0)
 }
 
 // BUF *PackGetBufEx(PACK*p,char*name,UINTindex)
-pub fn PackGetBufEx(p: *mut Pack, name: *mut c_char, index: u32) -> *mut Buffer {
-    todo!()
+pub fn PackGetBufEx(ptr: *mut Pack, name: *mut c_char, index: u32) -> *mut Buffer {
+    nullcheck!(null_mut(), ptr, name);
+
+    match PackGetValueEx(ptr, name, index as usize) {
+        Some(i) => i.buf(),
+        None => null_mut()
+    }
 }
 
 // bool PackGetBool(PACK*p,char*name)
-pub fn PackGetBool(p: *mut Pack, name: *mut c_char) -> bool {
-    todo!()
+pub fn PackGetBool(ptr: *mut Pack, name: *mut c_char) -> bool {
+    nullcheck!(false, ptr, name);
+
+    PackGetBoolEx(ptr, name, 0)
 }
 
 // bool PackGetBoolEx(PACK*p,char*name,UINTindex)
-pub fn PackGetBoolEx(p: *mut Pack, name: *mut c_char, index: u32) -> bool {
+pub fn PackGetBoolEx(ptr: *mut Pack, name: *mut c_char, index: u32) -> bool {
+    nullcheck!(false, ptr, name);
+    
     todo!()
 }
 
 // X *PackGetX(PACK*p,char*name)
-pub fn PackGetX(p: *mut Pack, name: *mut c_char) -> *mut X {
+pub fn PackGetX(ptr: *mut Pack, name: *mut c_char) -> *mut X {
+    nullcheck!(null_mut(), ptr, name);
+
     todo!()
 }
 
 // LIST *PackGetXList(PACK*p,char*name)
-pub fn PackGetXList(p: *mut Pack, name: *mut c_char) -> *mut List<RawPtr> {
+pub fn PackGetXList(ptr: *mut Pack, name: *mut c_char) -> *mut List<RawPtr> {
+    nullcheck!(null_mut(), ptr, name);
+
     todo!()
 }
 
 // K *PackGetK(PACK*p,char*name)
-pub fn PackGetK(p: *mut Pack, name: *mut c_char) -> *mut K {
+pub fn PackGetK(ptr: *mut Pack, name: *mut c_char) -> *mut K {
+    nullcheck!(null_mut(), ptr, name);
+
     todo!()
 }
 
 // bool PackGetIp(PACK*p,char*name,IP*ip)
-pub fn PackGetIp(p: *mut Pack, name: *mut c_char, ip: *mut IP) -> bool {
-    todo!()
+pub fn PackGetIp(ptr: *mut Pack, name: *mut c_char, ip: *mut IP) -> bool {
+    nullcheck!(false, ptr, name, ip);
+
+    PackGetIpEx(ptr, name, ip, 0)
 }
 
 // bool PackGetIpEx(PACK*p,char*name,IP*ip,UINTindex)
-pub fn PackGetIpEx(p: *mut Pack, name: *mut c_char, ip: *mut IP, index: u32) -> bool {
+pub fn PackGetIpEx(ptr: *mut Pack, name: *mut c_char, ip: *mut IP, index: u32) -> bool {
+    nullcheck!(false, ptr, name, ip);
+
     todo!()
 }
 
 // UINT PackGetIp32(PACK*p,char*name)
-pub fn PackGetIp32(p: *mut Pack, name: *mut c_char) -> u32 {
-    todo!()
+pub fn PackGetIp32(ptr: *mut Pack, name: *mut c_char) -> u32 {
+    nullcheck!(0, ptr, name);
+
+    PackGetIp32Ex(ptr, name, 0)
 }
 
 // UINT PackGetIp32Ex(PACK*p,char*name,UINTindex)
-pub fn PackGetIp32Ex(p: *mut Pack, name: *mut c_char, index: u32) -> u32 {
+pub fn PackGetIp32Ex(ptr: *mut Pack, name: *mut c_char, index: u32) -> u32 {
+    nullcheck!(0, ptr, name);
+
     todo!()
 }
 
 // bool PackGetIp6AddrEx(PACK*p,char*name,IPV6_ADDR*addr,UINTindex)
-pub fn PackGetIp6AddrEx(p: *mut Pack, name: *mut c_char, addr: *mut IpAddr, index: u32) -> bool {
+pub fn PackGetIp6AddrEx(ptr: *mut Pack, name: *mut c_char, addr: *mut IpAddr, index: u32) -> bool {
+    nullcheck!(false, ptr, addr);
+
     todo!("Use IPV6_ADDR")
 }
 
 // bool PackGetData2(PACK*p,char*name,void*data,UINTsize)
-pub fn PackGetData2(p: *mut Pack, name: *mut c_char, data: *mut core::ffi::c_void, size: u32) -> bool {
-    todo!()
+pub fn PackGetData2(ptr: *mut Pack, name: *mut c_char, data: *mut c_void, size: u32) -> bool {
+    nullcheck!(false, ptr, name, data);
+
+    PackGetDataEx2(ptr, name, data, size, 0)
 }
 
 // bool PackGetDataEx2(PACK*p,char*name,void*data,UINTsize,UINTindex)
 pub fn PackGetDataEx2(
-    p: *mut Pack,
+    ptr: *mut Pack,
     name: *mut c_char,
     data: *mut core::ffi::c_void,
     size: u32,
     index: u32,
 ) -> bool {
+    nullcheck!(false, ptr, name, data);
+
     todo!()
 }
 

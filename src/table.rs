@@ -1,10 +1,3 @@
-// TOKEN_LIST *GetTableNameStartWith(char*str)
-// char *GetTableStr(char*name)
-// wchar_t *GetTableUniStr(char*name)
-// wchar_t *GetUniErrorStr(UINTerr)
-// UINT GetTableInt(char*name)
-// UINT GetCurrentLangId()
-
 use std::{
     cell::LazyCell,
     collections::HashMap,
@@ -75,9 +68,13 @@ pub fn load_table() -> Table {
     table
 }
 
-pub extern "C" fn GetTableNameStartWith(str: *const c_char) {}
+// TOKEN_LIST *GetTableNameStartWith(char*str)
+pub extern "C" fn GetTableNameStartWith(str: *const c_char) {
+    todo!()
+}
 
 // Mayaqua internal?
+// char *GetTableStr(char*name)
 pub extern "C" fn GetTableStr(name: *const c_char) -> *const u8 {
     let name = unsafe { CStr::from_ptr(name) };
     let name = name.to_str().unwrap_or("");
@@ -89,6 +86,7 @@ pub extern "C" fn GetTableStr(name: *const c_char) -> *const u8 {
     }
 }
 
+// wchar_t *GetTableUniStr(char*name)
 pub extern "C" fn GetTableUniStr(name: *const c_char) -> *const c_ushort {
     let name = unsafe { CStr::from_ptr(name) };
     let name = name.to_str().unwrap_or("");
@@ -103,6 +101,7 @@ pub extern "C" fn GetTableUniStr(name: *const c_char) -> *const c_ushort {
     }
 }
 
+// wchar_t *GetUniErrorStr(UINTerr)
 pub extern "C" fn GetUniErrorStr(err: u32) -> *const c_ushort {
     let lookup = format!("ERR_{}", err);
     if let Some(value) = TABLE.get(&lookup) {
@@ -115,10 +114,12 @@ pub extern "C" fn GetUniErrorStr(err: u32) -> *const c_ushort {
     }
 }
 
+// UINT GetTableInt(char*name)
 pub extern "C" fn GetTableInt(name: *const c_char) -> u32 {
     return 0;
 }
 
+// UINT GetCurrentLangId()
 pub extern "C" fn GetCurrentLangId() -> u32 {
     return 1; // 0 for Japanese, 1 for English
 }

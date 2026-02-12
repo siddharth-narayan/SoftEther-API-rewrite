@@ -4,7 +4,7 @@ use toml::{Table, Value};
 use crate::{config::structure::Config, mem::structs::list::List, nullcheck, str::{clone_from_c_str, clone_from_uni_str, into_c_str}};
 
 // Either a Folder or a Value
-enum GenericItem {
+pub enum GenericItem {
     Folder(Folder),
     Item(Item),
 }

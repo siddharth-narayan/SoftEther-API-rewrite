@@ -1,12 +1,3 @@
-// void *GetUnixio4Stdout()
-// void UnixSetHighOomScore()
-// TOKEN_LIST *UnixExec(char*cmd)
-// void UnixDisableInterfaceOffload(char*name)
-// void UnixSetEnableKernelEspProcessing(boolb)
-// void UnixDisableCoreDump()
-// void UnixCloseIO()
-// bool UnixIsInVm()
-
 use std::{
     ffi::{CStr, c_char},
     fs::File,
@@ -22,6 +13,7 @@ struct UNIXIO {
     write_mode: bool,
 }
 
+// void *GetUnixio4Stdout()
 #[unsafe(no_mangle)]
 pub extern "C" fn GetUnixio4Stdout() -> RawPtr {
     static OUT: UNIXIO = UNIXIO {
@@ -32,6 +24,7 @@ pub extern "C" fn GetUnixio4Stdout() -> RawPtr {
     &OUT as *const UNIXIO as RawPtr
 }
 
+// void UnixSetHighOomScore()
 #[unsafe(no_mangle)]
 pub extern "C" fn UnixSetHighOomScore() {
     let path = format!("/proc/{}/oom_score_adj", process::id());
@@ -41,21 +34,27 @@ pub extern "C" fn UnixSetHighOomScore() {
     }
 }
 
+// TOKEN_LIST *UnixExec(char*cmd)
 #[unsafe(no_mangle)]
 pub extern "C" fn UnixExec(command: *const c_char) {}
 
+// void UnixDisableInterfaceOffload(char*name)
 #[unsafe(no_mangle)]
 pub extern "C" fn UnixDisableInterfaceOffload(name: *const c_char) {}
 
+// void UnixSetEnableKernelEspProcessing(boolb)
 #[unsafe(no_mangle)]
 pub extern "C" fn UnixSetEnableKernelEspProcessing(b: bool) {}
 
+// void UnixDisableCoreDump()
 #[unsafe(no_mangle)]
 pub extern "C" fn UnixDisableCoreDump() {}
 
+// void UnixCloseIO()
 #[unsafe(no_mangle)]
 pub extern "C" fn UnixCloseIO() {}
 
+// bool UnixIsInVm()
 #[unsafe(no_mangle)]
 pub extern "C" fn UnixIsInVM() -> bool {
     return false;
