@@ -1,3 +1,4 @@
+// USE BufReader to make frequent reads/writes?
 // BUF *NewBuf();
 // BUF *NewBufFromMemory(void *buf, UINT size);
 // void ClearBuf(BUF *b);
@@ -14,11 +15,41 @@
 
 // void AddBufStr(BUF *b, char *str);
 // bool DumpBuf(BUF *b, char *filename);
+pub extern "C" fn DumpBuf(buffer: *mut Buffer, filename: *const i8) -> bool {
+    nullcheck!(false, buffer, filename);
+    
+    let buffer = unsafe { &mut *buffer };
+
+    let filename = unsafe { clone_from_c_str(filename) };
+    let mut file = match File::create(filename) {
+        Ok(f) => f,
+        Err(e) => {
+            println!("Failed to open file to dump to: {}", e);
+            return false;
+        }
+    };
+
+    let as_slice =  buffer.as_slice();
+    
+    match file.write_all(as_slice) {
+        Ok(_) => true,
+        Err(_) => false,
+    }
+
+    // filename.write_str(s)
+}
+
 // bool DumpBufW(BUF *b, wchar_t *filename);
 // bool DumpBufWIfNecessary(BUF *b, wchar_t *filename);
 // bool DumpDataW(void *data, UINT size, wchar_t *filename);
 
 // BUF *CloneBuf(BUF *b);
+pub extern "C" fn CloneBuf(buffer: *mut Buffer) -> *mut Buffer {
+    let orig = unsafe { &mut *buffer };
+    
+    orig.clone().as_mut_ptr()
+}
+
 // BUF *MemToBuf(void *data, UINT size);
 // BUF *RandBuf(UINT size);
 
@@ -32,11 +63,7 @@
 // void AppendBufStr(BUF *b, char *str);
 
 use std::{
-    ffi::{CStr, c_void},
-    fs::File,
-    io::{Read, Write},
-    path::Path,
-    ptr::{null, null_mut},
+    ffi::{CStr, c_void}, fs::File, io::{Read, Write}, path::Path, ptr::{null, null_mut}
 };
 
 // Keep C struct members, but add the *actual* members for rust after that
@@ -90,6 +117,10 @@ impl Buffer {
 
     pub fn free_mut_ptr(ptr: *mut Self) {
         unsafe { drop(Box::from_raw(ptr)) }
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        self.buf.as_slice()
     }
 
     pub fn seek(&mut self, position: usize) {
@@ -234,9 +265,7 @@ impl Buffer {
 // BUF *ReadRemainBuf(BUF *b);
 // UINT ReadBufRemainSize(BUF *b);
 use crate::{
-    c_compat,
-    mem::mem::{Copy, Zero},
-    util::CCompat,
+    c_compat, mem::mem::{Copy, Zero}, nullcheck, str::clone_from_c_str, util::CCompat
 };
 
 #[unsafe(no_mangle)]

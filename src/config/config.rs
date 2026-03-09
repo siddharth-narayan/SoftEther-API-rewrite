@@ -5,8 +5,8 @@ use crate::{config::structure::Config, mem::structs::list::List, nullcheck, str:
 
 // Either a Folder or a Value
 pub enum GenericItem {
-    Folder(Folder),
-    Item(Item),
+    Folder(Box<Folder>),
+    Item(Box<Item>),
 }
 
 pub struct Folder {
@@ -108,12 +108,14 @@ fn CfgAdd(folder: *mut Folder, key: *mut c_char, value: Value) -> *mut Item {
     let folder = unsafe { &mut *folder };
     let key = unsafe { clone_from_c_str(key) };
     
-    let mut item = Item::new(value);
-    let item_ptr = (&mut item) as *mut Item;
+    let mut item = Box::new(Item::new(value));
+    let ptr = Box::as_mut_ptr(&mut item);
 
-    let _ = folder.insert(key, GenericItem::Item(item));
+    let generic = GenericItem::Item(item);
+    // let item_ptr = (&mut item) as *mut Item;    
+    let _ = folder.insert(key, generic);
 
-    item_ptr
+    ptr
 }
 
 fn CfgGet<'a>(folder: *mut Folder, name: *mut c_char) -> Option<&'a mut GenericItem> {
@@ -188,7 +190,7 @@ pub extern "C" fn CfgGetFolder(parent: *mut Folder, name: *mut c_char) -> *mut F
 
     match parent._internal.get_mut(&name) {
         Some(s) => match s {
-            GenericItem::Folder(t) => t,
+            GenericItem::Folder(t) => Box::as_mut_ptr(t),
             _ =>  null_mut(),
         },
         None => {
@@ -297,7 +299,7 @@ pub extern "C" fn CfgGetStr(folder: *mut Folder, name: *mut c_char, dst: *mut u8
         }
     };
 
-    let item_ptr: *mut Item = item;
+    let item_ptr: *mut Item = Box::as_mut_ptr(item);
 
     let string_bytes = match &mut item._internal {
         Value::String(s) => unsafe { 

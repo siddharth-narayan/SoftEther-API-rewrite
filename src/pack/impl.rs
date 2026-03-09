@@ -1,10 +1,11 @@
 use std::ffi::{CString, c_char, c_void};
 use std::net::IpAddr;
 use std::ptr::null_mut;
+use std::slice;
 
 use widestring::U16CString;
 
-use crate::{c_export, nullcheck};
+use crate::{c_export, nullcheck, util};
 
 use crate::mem::structs::buf::Buffer;
 use crate::mem::structs::list::List;
@@ -12,7 +13,7 @@ use crate::network::structs::cert::{K, X};
 use crate::network::util::IP;
 use crate::pack::pack::{Pack, PackElement, PackInnerValue};
 use crate::str::clone_from_c_str;
-use crate::util::{RawCStr, RawPtr, copy_slice_to_slice};
+use crate::util::{RawCStr, RawPtr, copy};
 
 c_export! {
     // PACK *NewPack()
@@ -127,7 +128,7 @@ pub fn PackGetStrEx(ptr: *mut Pack, name: *mut c_char, str_: *mut u8, size: u32,
     
     match CString::new(value.str()) {
         Ok(src_str) => {
-            copy_slice_to_slice(dst_str, src_str.as_bytes_with_nul(), size as usize);
+            copy(dst_str, src_str.as_bytes_with_nul());
             true
         },
         Err(_) => {
@@ -154,11 +155,11 @@ pub fn PackGetUniStrEx(ptr: *mut Pack, name: *mut c_char, unistr: *mut u16, size
         }
     };
 
-    let dst_str: &mut [u16] = unsafe { std::slice::from_raw_parts_mut(unistr, size as usize) };
+    let dst_str = unsafe { std::slice::from_raw_parts_mut(unistr, size as usize) };
     
     match U16CString::from_str(value.str()) {
         Ok(src_str) => {
-            copy_slice_to_slice(dst_str, src_str.as_slice_with_nul(), size as usize);
+            copy(dst_str, src_str.as_slice_with_nul());
             true
         },
         Err(_) => {
@@ -346,13 +347,26 @@ pub fn PackGetData2(ptr: *mut Pack, name: *mut c_char, data: *mut c_void, size: 
 pub fn PackGetDataEx2(
     ptr: *mut Pack,
     name: *mut c_char,
-    data: *mut core::ffi::c_void,
+    data: *mut c_void,
     size: u32,
     index: u32,
 ) -> bool {
+    let data = data as *mut u8;
+
     nullcheck!(false, ptr, name, data);
 
-    todo!()
+    let value = match PackGetValueEx(ptr, name, index as usize) {
+        Some(v) => v,
+        None => {
+            return false;
+        }
+    };
+
+    let src = value.buf().as_slice();
+    let data = unsafe { slice::from_raw_parts_mut(data, size as usize) };
+    util::copy(data, src);
+
+    true
 }
 
 // }

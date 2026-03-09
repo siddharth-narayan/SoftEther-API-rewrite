@@ -7,9 +7,14 @@ pub trait CCompat {
     fn c_compat(&mut self);
 }
 
-pub fn copy_slice_to_slice<T: Copy>(dst: &mut [T], src: &[T], size: usize) {
-    let copy_len = min(min(dst.len(), src.len()), size);
+pub fn copy<T: Copy>(dst: &mut [T], src: &[T]) -> usize {
+    let copy_len = min(src.len(), dst.len());
+
+    let src = &src[0..copy_len];
+    let dst = &mut dst[0..copy_len];
     dst.copy_from_slice(src);
+
+    copy_len
 }
 
 // UINT Base64Decode(void *dst, const void *src, const UINT size);

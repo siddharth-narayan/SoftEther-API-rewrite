@@ -73,7 +73,42 @@ pub fn url_decode(url: &CStr) -> String {
 // void FormatArgs(char*buf,UINTsize,char*fmt,va_listargs)
 // void Format(char*buf,UINTsize,char*fmt,...)
 // void Print(char*fmt,...)
+enum PrintState {
+    Normal,
+    Special,
+}
+
+pub unsafe extern "C" fn Print(format: *mut c_char, args: ...) {
+    let format = unsafe { clone_from_c_str(format).into_chars() };
+    let out = Vec::<char>::new();
+    
+    let mut state = PrintState::Normal;
+    for char in format {
+        match state {
+            PrintState::Normal => {
+                if char == '%' {
+                    state = PrintState::Special;
+                    continue;
+                }
+
+
+            },
+            PrintState::Special => {
+
+            }
+        }
+
+    }
+}
+
 // void Debug(char*fmt,...)
+pub unsafe extern "C" fn Debug(format: *mut c_char, mut args: ...) {
+    // TODO: Debug mode
+    if true {
+        unsafe { Print(format, args) };
+    }
+}
+
 // UINT ToInt(char*str)
 // bool ToBool(char*str)
 // void ToStr(char*str,UINTi)
