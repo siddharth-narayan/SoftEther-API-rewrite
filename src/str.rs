@@ -78,6 +78,7 @@ enum PrintState {
     Special,
 }
 
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn Print(format: *mut c_char, args: ...) {
     let format = unsafe { clone_from_c_str(format).into_chars() };
     let out = Vec::<char>::new();
@@ -102,6 +103,7 @@ pub unsafe extern "C" fn Print(format: *mut c_char, args: ...) {
 }
 
 // void Debug(char*fmt,...)
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn Debug(format: *mut c_char, mut args: ...) {
     // TODO: Debug mode
     if true {

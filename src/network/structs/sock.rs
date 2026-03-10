@@ -673,17 +673,19 @@ pub fn connect_method_all(
 }
 
 // SOCK *NewUDP(UINTport)
-
+#[unsafe(no_mangle)]
 pub extern "C" fn NewUDP(port: u32) -> *mut Sock {
     NewUDPEx(port, false)
 }
 
 // SOCK *NewUDPEx(UINTport,boolipv6)
+#[unsafe(no_mangle)]
 pub extern "C" fn NewUDPEx(port: u32, is_ipv6: bool) -> *mut Sock {
     NewUDPEx2(port, is_ipv6, null_mut())
 }
 
 // SOCK *NewUDPEx2(UINTport,boolipv6,IP*ip)
+#[unsafe(no_mangle)]
 pub extern "C" fn NewUDPEx2(port: u32, is_ipv6: bool, ip: *mut IP) -> *mut Sock {
     if is_ipv6 {
         // TODO: NewUDP6()
@@ -694,6 +696,7 @@ pub extern "C" fn NewUDPEx2(port: u32, is_ipv6: bool, ip: *mut IP) -> *mut Sock 
 }
 
 // SOCK *NewUDPEx3(UINTport,IP*ip)
+#[unsafe(no_mangle)]
 pub extern "C" fn NewUDPEx3(port: u32, ip: *mut IP) -> *mut Sock {
     if ip.is_null() {
         return NewUDPEx2(port, false, null_mut());
@@ -705,6 +708,7 @@ pub extern "C" fn NewUDPEx3(port: u32, ip: *mut IP) -> *mut Sock {
 
 // TODO: Check if this actually connects to the remote, then use either connect_udp or listen_udp
 // SOCK *NewUDP4(UINTport,IP*ip)
+#[unsafe(no_mangle)]
 pub extern "C" fn NewUDP4(port: u32, ip: *mut IP) -> *mut Sock {
     nullcheck!(null_mut(), ip);
     // If port != 0 we're listening, otherwise we're connecting?
@@ -733,6 +737,7 @@ pub extern "C" fn NewUDP4(port: u32, ip: *mut IP) -> *mut Sock {
 }
 
 // SOCK *NewUDP6(UINTport,IP*ip)
+#[unsafe(no_mangle)]
 pub extern "C" fn NewUDP6(port: u32, ip: *mut IP) -> *mut Sock {
     let ip = unsafe { &mut *ip };
     let ip = match ip.to_ipv6() {
@@ -761,6 +766,7 @@ pub extern "C" fn NewUDP6(port: u32, ip: *mut IP) -> *mut Sock {
 // SOCK *Listen(UINTport)
 // SOCK *ListenEx(UINTport,boollocal_only)
 // SOCK *ListenEx2(UINTport,boollocal_only,boolenable_ca,IP*listen_ip)
+#[unsafe(no_mangle)]
 pub extern "C" fn ListenEx2(
     port: u32,
     local_only: bool,
@@ -799,6 +805,7 @@ pub extern "C" fn ListenEx2(
 // SOCK *ConnectEx2(char*hostname,UINTport,UINTtimeout,bool*cancel_flag)
 // SOCK *ConnectEx3(char*hostname,UINTport,UINTtimeout,bool*cancel_flag,char*nat_t_svc_name,UINT*nat_t_error_code,booltry_start_ssl,boolno_get_hostname)
 // SOCK *ConnectEx4(char*hostname,UINTport,UINTtimeout,bool*cancel_flag,char*nat_t_svc_name,UINT*nat_t_error_code,booltry_start_ssl,boolno_get_hostname,IP*ret_ip)
+#[unsafe(no_mangle)]
 pub extern "C" fn ConnectEx4(
     hostname: *mut c_char,
     port: u32,
@@ -835,6 +842,7 @@ pub extern "C" fn ConnectEx4(
 }
 
 // SOCK *BindConnectEx5(IP*localIP,UINTlocalport,char*hostname,UINTport,UINTtimeout,bool*cancel_flag,char*nat_t_svc_name,UINT*nat_t_error_code,booltry_start_ssl,boolno_get_hostname,SSL_VERIFY_OPTION*ssl_option,UINT*ssl_err,char*hint_str,IP*ret_ip)
+#[unsafe(no_mangle)]
 pub extern "C" fn BindConnectEx5(
     local_ip: *mut IP,
     local_port: u32,
@@ -896,11 +904,13 @@ pub extern "C" fn BindConnectEx5(
 // void AcceptInitEx(SOCK*s,boolno_lookup_hostname)
 
 // bool StartSSL(SOCK *sock, X *x, K *priv);
+#[unsafe(no_mangle)]
 pub extern "C" fn StartSSL(sock: *mut Sock, cert: *mut X, priv_key: *mut K) -> bool {
     StartSSLEx(sock, cert, priv_key, 0, null_mut())
 }
 
 // bool StartSSLEx(SOCK *sock, X *x, K *priv, UINT ssl_timeout, char *sni_hostname);
+#[unsafe(no_mangle)]
 pub extern "C" fn StartSSLEx(
     sock: *mut Sock,
     cert: *mut X,
@@ -921,6 +931,7 @@ pub extern "C" fn StartSSLEx(
 }
 
 // bool StartSSLEx3(SOCK *sock, X *x, K *priv, LIST *chain, UINT ssl_timeout, char *sni_hostname, SSL_VERIFY_OPTION *ssl_option, UINT *ssl_err);
+#[unsafe(no_mangle)]
 pub extern "C" fn StartSSLEx3(
     sock: *mut Sock,
     cert: *mut X,
@@ -987,6 +998,7 @@ pub extern "C" fn StartSSLEx3(
 // bool SendNow(SOCK*sock,intsecure)
 // bool SendPack(SOCK*s,PACK*p)
 // bool SendPackWithHash(SOCK*s,PACK*p)
+#[unsafe(no_mangle)]
 pub extern "C" fn Send(sock: *mut Sock, data: *mut u8, size: u32, secure: bool) -> u32 {
     nullcheck!(0, sock, data);
 
@@ -1008,6 +1020,7 @@ pub extern "C" fn Send(sock: *mut Sock, data: *mut u8, size: u32, secure: bool) 
 // bool RecvAll(SOCK*sock,void*data,UINTsize,boolsecure)
 // PACK *RecvPack(SOCK*s)
 // PACK *RecvPackWithHash(SOCK*s)
+#[unsafe(no_mangle)]
 pub extern "C" fn Recv(sock: *mut Sock, data: *mut u8, size: u32, secure: bool) -> u32 {
     nullcheck!(0, sock, data);
 
@@ -1024,6 +1037,7 @@ pub extern "C" fn Recv(sock: *mut Sock, data: *mut u8, size: u32, secure: bool) 
 }
 
 // UINT Peek(SOCK*sock,void*data,UINTsize)
+#[unsafe(no_mangle)]
 pub extern "C" fn Peek(sock: *mut Sock, data: *mut u8, size: u32) -> u32 {
     nullcheck!(0, sock, data);
 

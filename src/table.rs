@@ -69,12 +69,15 @@ pub fn load_table() -> Table {
 }
 
 // TOKEN_LIST *GetTableNameStartWith(char*str)
+#[unsafe(no_mangle)]
 pub extern "C" fn GetTableNameStartWith(str: *const c_char) {
     todo!()
 }
 
 // Mayaqua internal?
+
 // char *GetTableStr(char*name)
+#[unsafe(no_mangle)]
 pub extern "C" fn GetTableStr(name: *const c_char) -> *const u8 {
     let name = unsafe { CStr::from_ptr(name) };
     let name = name.to_str().unwrap_or("");
@@ -87,6 +90,7 @@ pub extern "C" fn GetTableStr(name: *const c_char) -> *const u8 {
 }
 
 // wchar_t *GetTableUniStr(char*name)
+#[unsafe(no_mangle)]
 pub extern "C" fn GetTableUniStr(name: *const c_char) -> *const c_ushort {
     let name = unsafe { CStr::from_ptr(name) };
     let name = name.to_str().unwrap_or("");
@@ -102,6 +106,7 @@ pub extern "C" fn GetTableUniStr(name: *const c_char) -> *const c_ushort {
 }
 
 // wchar_t *GetUniErrorStr(UINTerr)
+#[unsafe(no_mangle)]
 pub extern "C" fn GetUniErrorStr(err: u32) -> *const c_ushort {
     let lookup = format!("ERR_{}", err);
     if let Some(value) = TABLE.get(&lookup) {
@@ -115,11 +120,13 @@ pub extern "C" fn GetUniErrorStr(err: u32) -> *const c_ushort {
 }
 
 // UINT GetTableInt(char*name)
+#[unsafe(no_mangle)]
 pub extern "C" fn GetTableInt(name: *const c_char) -> u32 {
     return 0;
 }
 
 // UINT GetCurrentLangId()
+#[unsafe(no_mangle)]
 pub extern "C" fn GetCurrentLangId() -> u32 {
     return 1; // 0 for Japanese, 1 for English
 }

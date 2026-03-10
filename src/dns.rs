@@ -89,16 +89,20 @@ pub fn resolve_all(hostname: &str) -> Option<Vec<IpAddr>> {
     }
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn DnsThreadNum() -> u32 {
     return 1;
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn DnsThreadNumMax() -> u32 {
     return 8;
 }
 
+#[unsafe(no_mangle)]
 pub extern "C" fn DnsThreadNumMaxSet(num: u32) {}
 
+#[unsafe(no_mangle)]
 pub extern "C" fn DnsResolve(
     ipv6: *mut IP,
     ipv4: *mut IP,
@@ -110,6 +114,7 @@ pub extern "C" fn DnsResolve(
 }
 
 // TODO: Unfishished
+#[unsafe(no_mangle)]
 pub extern "C" fn GetIPEx(
     mut ip: *const IP,
     hostname: *const i8,
