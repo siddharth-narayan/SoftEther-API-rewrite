@@ -13,6 +13,7 @@ path = "utility/header-prune/main.rs"
 [dependencies]
 antlr4rust = "0.5.2"
 cbindgen = "0.29.2"
+libc = "0.2.183"
 openssl = "0.10.75"
 serde = "1.0.228"
 socket2 = "0.6.2"

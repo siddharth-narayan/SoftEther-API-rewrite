@@ -1,8 +1,9 @@
+use core::slice;
 use std::{ffi::{CStr, CString, c_char}, ptr::null_mut, str::FromStr};
 
 use widestring::{U16CStr, WideCStr};
 
-use crate::util::RawCStr;
+use crate::{nullcheck, util::{self, RawCStr}};
 
 pub fn into_c_str(mut s: String) -> *const i8 {
     let mut s = match CString::new(s) {
@@ -61,23 +62,26 @@ pub fn url_decode(url: &CStr) -> String {
 }
 
 // UINT StrLen(char*str)
+#[unsafe(no_mangle)]
+pub extern "C" fn StrLen(string: *mut c_char) -> usize {
+    nullcheck!(0, string);
+    
+    unsafe { libc::strlen(string) }
+}
+
 // UINT StrSize(char*str)
-// UINT StrCpy(char*dst,UINTsize,char*src)
-// UINT StrCat(char*dst,UINTsize,char*src)
-// UINT StrCatLeft(char*dst,UINTsize,char*src)
-// char ToUpper(charc)
-// void StrUpper(char*str)
-// void StrLower(char*str)
-// int StrCmp(char*str1,char*str2)
-// int StrCmpi(char*str1,char*str2)
-// void FormatArgs(char*buf,UINTsize,char*fmt,va_listargs)
-// void Format(char*buf,UINTsize,char*fmt,...)
-// void Print(char*fmt,...)
+#[unsafe(no_mangle)]
+pub extern "C" fn StrSize(string: *mut c_char) -> usize {
+    StrLen(string) + 1
+}
+
+
 enum PrintState {
     Normal,
     Special,
 }
 
+// void Print(char*fmt,...)
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn Print(format: *mut c_char, args: ...) {
     let format = unsafe { clone_from_c_str(format).into_chars() };
@@ -111,6 +115,27 @@ pub unsafe extern "C" fn Debug(format: *mut c_char, mut args: ...) {
     }
 }
 
+// UINT StrCpy(char*dst,UINTsize,char*src)
+pub extern "C" fn StrCpy(dst: *mut c_char, size: u32, src: *mut c_char) -> u32 {
+    let src= unsafe { slice::from_raw_parts_mut(src, size as usize) };
+    let dst= unsafe { slice::from_raw_parts_mut(dst, size as usize) };
+
+    util::copy(src, dst) as u32
+}
+
+// UINT StrCat(char*dst,UINTsize,char*src)
+pub extern "C" fn StrCat(dst: *mut c_char, size: u32, src: *mut c_char) -> u32 {
+    return 0
+}
+
+// UINT StrCatLeft(char*dst,UINTsize,char*src)
+// char ToUpper(charc)
+// void StrUpper(char*str)
+// void StrLower(char*str)
+// int StrCmp(char*str1,char*str2)
+// int StrCmpi(char*str1,char*str2)
+// void FormatArgs(char*buf,UINTsize,char*fmt,va_listargs)
+// void Format(char*buf,UINTsize,char*fmt,...)
 // UINT ToInt(char*str)
 // bool ToBool(char*str)
 // void ToStr(char*str,UINTi)

@@ -7,6 +7,8 @@ pub trait CCompat {
     fn c_compat(&mut self);
 }
 
+/// Safe `copy_from_slice` wrapper that should never panic.
+/// Copies the maximum amount of elements it can safely from one slice to another
 pub fn copy<T: Copy>(dst: &mut [T], src: &[T]) -> usize {
     let copy_len = min(src.len(), dst.len());
 
